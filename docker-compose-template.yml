@@ -1,0 +1,20 @@
+# docker-compose to spin up cloudflare tunnel and postgres
+version: "3.9"
+services:
+  tunnel:
+    build:
+      # TODO: replace the path likely /home/pi/spinup
+      context: {{ .Path }}/{{ .UserID }}
+    restart: unless-stopped
+  postgres:
+    image: {{ .Architecture }}/{{ .Name }}
+    restart: unless-stopped
+    ports:
+      - "{{ .Port }}:5432"
+    environment:
+      POSTGRES_PASSWORD: {{ .Secret }}
+    volumes:
+      - data-volume-{{ .UserID }}:/var/lib/postgresql/data
+
+volumes:
+  data-volume-{{ .UserID }}:

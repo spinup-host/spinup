@@ -1,0 +1,7 @@
+credentials-file: /home/cloudflared/{{ .Tunnel.Secret }}.json
+tunnel: {{ .Tunnel.Secret }}
+
+ingress:
+  - hostname: {{ .UserID }}.spinup.host
+    service: tcp://{{ .Name }}:{{ .Port }}
+  - service: http_status:404
