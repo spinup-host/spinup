@@ -129,11 +129,11 @@ func createDockerComposeFile(absolutepath string, s Service) error {
 		Secret       string
 	}{
 		projectDir,
-		s.UserID,
-		s.Architecture,
-		s.Name,
+		s.userID,
+		s.architecture,
+		s.name,
 		5432,
-		s.Tunnel.Secret,
+		s.tunnel.Secret,
 	}
 	err = templ.Execute(f, data)
 	if err != nil {

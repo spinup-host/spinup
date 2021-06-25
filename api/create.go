@@ -45,21 +45,21 @@ func init() {
 }
 
 type Service struct {
-	Name     string
-	Duration time.Duration
-	Resource map[string]interface{}
-	Tunnel   cloudflare.ArgoTunnel
-	UserID   string
+	name     string
+	duration time.Duration
+	resource map[string]interface{}
+	tunnel   cloudflare.ArgoTunnel
+	userID   string
 	// eg. arm64v8 or arm32v7
-	Architecture string
-	Port         uint
+	architecture string
+	port         uint
 }
 
 type tunnelConfig struct {
-	AccountTag   string
-	TunnelSecret string
-	TunnelID     string
-	TunnelName   string
+	accountTag   string
+	tunnelSecret string
+	tunnelID     string
+	tunnelName   string
 }
 
 func Hello(w http.ResponseWriter, req *http.Request) {
@@ -81,13 +81,13 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Fatalf("fatal: reading from readall body %v", req.Body)
 	}
-	if c.Name != "postgres" {
-		fmt.Fprintf(w, "currently we don't support %s", c.Name)
+	if c.name != "postgres" {
+		fmt.Fprintf(w, "currently we don't support %s", c.name)
 		return
 	}
-	c.Port = 5432
-	c.Tunnel.Secret = randSeq(32)
-	c.Tunnel.ID, err = createTunnel(accountID, c.UserID, c.Tunnel.Secret)
+	c.port = 5432
+	c.tunnel.Secret = randSeq(32)
+	c.tunnel.ID, err = createTunnel(accountID, c.userID, c.tunnel.Secret)
 	if err != nil {
 		log.Printf("ERROR: creating argo tunnel %v", err)
 		http.Error(w, "Error creating tunnel", 500)
@@ -95,8 +95,8 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	}
 	rr := cloudflare.DNSRecord{
 		Type:    "CNAME",
-		Name:    c.UserID,
-		Content: c.Tunnel.ID + ".cfargotunnel.com",
+		Name:    c.userID,
+		Content: c.tunnel.ID + ".cfargotunnel.com",
 	}
 	if _, err = createCNAME(ctx, rr); err != nil {
 		log.Printf("ERROR: creating cloudflare CNAME for %s %v", rr.Name, err)
@@ -104,13 +104,13 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	tc := tunnelConfig{
-		AccountTag:   accountID,
-		TunnelSecret: c.Tunnel.Secret,
-		TunnelID:     c.Tunnel.ID,
-		TunnelName:   c.UserID,
+		accountTag:   accountID,
+		tunnelSecret: c.tunnel.Secret,
+		tunnelID:     c.tunnel.ID,
+		tunnelName:   c.userID,
 	}
 	if err = prepareService(c, tc); err != nil {
-		log.Printf("ERROR: preparing service for %s %v", c.UserID, err)
+		log.Printf("ERROR: preparing service for %s %v", c.userID, err)
 		http.Error(w, "Error preparing service", 500)
 	}
 	return
@@ -147,20 +147,20 @@ func createCNAME(ctx context.Context, rr cloudflare.DNSRecord) (string, error) {
 }
 
 func prepareService(s Service, tc tunnelConfig) error {
-	err := os.Mkdir(projectDir+"/"+s.UserID, 0755)
+	err := os.Mkdir(projectDir+"/"+s.userID, 0755)
 	if err != nil {
-		return fmt.Errorf("ERROR: creating project directory at %s", projectDir+"/"+s.UserID)
+		return fmt.Errorf("ERROR: creating project directory at %s", projectDir+"/"+s.userID)
 	}
-	if err := createJSONFile(projectDir+"/"+s.UserID+"/"+tc.TunnelID+".json", tc); err != nil {
+	if err := createJSONFile(projectDir+"/"+s.userID+"/"+tc.tunnelID+".json", tc); err != nil {
 		return fmt.Errorf("ERROR: creating tunnel json file %v", err)
 	}
-	if err := createDockerComposeFile(projectDir+"/"+s.UserID+"/", s); err != nil {
+	if err := createDockerComposeFile(projectDir+"/"+s.userID+"/", s); err != nil {
 		return fmt.Errorf("ERROR: creating service docker-compose file %v", err)
 	}
-	if err := createDockerfile(projectDir+"/"+s.UserID+"/", s); err != nil {
+	if err := createDockerfile(projectDir+"/"+s.userID+"/", s); err != nil {
 		return fmt.Errorf("ERROR: creating service docker file %v", err)
 	}
-	if err := createConfigfile(projectDir+"/"+s.UserID+"/", s); err != nil {
+	if err := createConfigfile(projectDir+"/"+s.userID+"/", s); err != nil {
 		return fmt.Errorf("ERROR: creating service config file %v", err)
 	}
 	return nil
