@@ -69,7 +69,7 @@ func Hello(w http.ResponseWriter, req *http.Request) {
 func CreateService(w http.ResponseWriter, req *http.Request) {
 	ctx := context.Background()
 	if req.Method != "POST" {
-		http.Error(w, "Method is not supported.", http.StatusNotFound)
+		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
 	var c Service
