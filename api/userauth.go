@@ -14,13 +14,13 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type userAuth struct {
-		Code string `json:"stupid"`
+		Code string `json:"code"`
 	}
 
 	type githubAuth struct {
-		clientID     string
-		clientSecret string
-		code         string
+		Code         string `json:"code"`
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
 	}
 	var ua userAuth
 	// TODO: format this to include best practices https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
@@ -29,7 +29,6 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	log.Println("ua::", ua)
 	clientID, ok := os.LookupEnv("CLIENT_ID")
 	if !ok {
 		log.Fatalf("FATAL: getting environment variable CLIENT_ID")
@@ -38,22 +37,19 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		log.Fatalf("FATAL: getting environment variable CLIENT_SECRET")
 	}
-	githubAccessTokenURL := "https://github.com/login/oauth/access_token"
-	ghAuth := githubAuth{
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		code:         ua.Code,
-	}
-	ghAuthJSON, err := json.Marshal(ghAuth)
+	requestBodyMap := map[string]string{"client_id": clientID, "client_secret": clientSecret, "code": ua.Code}
+	requestBodyJSON, err := json.Marshal(requestBodyMap)
 	if err != nil {
-		log.Printf("ERROR: marshalling github auth %v", ghAuth)
+		log.Printf("ERROR: marshalling github auth %v", requestBodyMap)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	res, err := http.Post(githubAccessTokenURL, "application/json", bytes.NewReader(ghAuthJSON))
-	// MYSTERY: for some reason error value is nill even though the res status code is 404
-	// To catch that case, I have added a if gate checking the response statuscode
-	// I am expecting the error value to be non nill when the Post request doesn't succeed
+	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", bytes.NewBuffer(requestBodyJSON))
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Access-Control-Allow-Origin", "*")
+	client := http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -61,19 +57,24 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		log.Printf("ERROR: likely user code is invalid")
-		http.Error(w, "ERROR: likely user code is invalid", http.StatusInternalServerError)
-		return
+		// http.Error(w, "ERROR: likely user code is invalid", http.StatusInternalServerError)
+		// return
 	}
-	var ghAccessToken string
+	type githubAccess struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+		Scope       string `json:"scope"`
+	}
+	var ghAccessToken githubAccess
 	err = json.NewDecoder(res.Body).Decode(&ghAccessToken)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	githubUserDataURL := "https://api.github.com/user"
-	req, err := http.NewRequest("GET", githubUserDataURL, nil)
-	req.Header.Add("Authorization: token ", ghAccessToken)
-	client := http.Client{}
+	req, err = http.NewRequest("GET", githubUserDataURL, nil)
+	req.Header.Add("Authorization", "token "+ghAccessToken.AccessToken)
+	client = http.Client{}
 	res, err = client.Do(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -81,15 +82,19 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	defer res.Body.Close()
 	// TODO: Do we need token field? Token is meant for the backend to communicate to Github
-	type User struct {
-		username  string
-		avatarURL string
-		name      string
-		token     string
+	type user struct {
+		Username  string `json:"login"`
+		AvatarURL string `json:"avatar_url"`
+		Name      string `json:"name"`
+		Token     string `json:"token"`
 	}
-	var user User
-	json.NewDecoder(res.Body).Decode(&user)
-	userJSON, err := json.Marshal(user)
+	var u user
+	err = json.NewDecoder(res.Body).Decode(&u)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	userJSON, err := json.Marshal(u)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

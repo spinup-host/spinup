@@ -15,5 +15,5 @@ func main() {
 	http.HandleFunc("/hello", a)
 	http.HandleFunc("/createservice", api.CreateService)
 	http.HandleFunc("/githubAuth", api.GithubAuth)
-	http.ListenAndServe("localhost:8090", nil)
+	http.ListenAndServe("localhost:3001", nil)
 }
