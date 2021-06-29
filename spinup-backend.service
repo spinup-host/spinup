@@ -1,0 +1,20 @@
+[Unit]
+Description=Spinup backend service
+ConditionPathExists=/home/pi/spinup/spinup-backend
+After=network.target
+ 
+[Service]
+Type=simple
+User=pi
+Group=pi
+LimitNOFILE=1024
+
+Restart=on-failure
+RestartSec=10
+startLimitIntervalSec=60
+EnvironmentFile=/home/pi/spinup/spinup-backend/spinup.env
+WorkingDirectory=/home/pi/spinup/spinup-backend
+ExecStart=/home/pi/spinup/spinup-backend/spinup-host
+
+[Install]
+WantedBy=multi-user.target
