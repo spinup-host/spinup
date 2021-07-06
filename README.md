@@ -7,7 +7,7 @@ An alternative to RDS
 It requires a bunch of environment variables. You can export them and run using
 
 ```
-export CF_API_EMAIL=yourcfemail && export CF_API_KEY=yourcfapikey && export CF_ACCOUNT_ID=yourcfaccountid && export CF_ZONE_ID=yourcfzonid && export SPINUP_PROJECT_DIR=/Your/Project/Dir && export ARCHITECTURE=architecture && go run main.go
+export SPINUP_PROJECT_DIR=/Your/Project/Dir && export ARCHITECTURE=architecture && go run main.go
 ```
 
 On another terminal create a POST request using

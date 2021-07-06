@@ -1,7 +1,0 @@
-FROM homeall/cloudflared
-WORKDIR /home/cloudflared
-COPY config.yaml .
-COPY cert.pem .
-COPY {{ .Tunnel.Secret }}.json .
-ENV TUNNEL_ORIGIN_CERT /home/cloudflared/cert.pem
-RUN /usr/local/bin/cloudflared tunnel --config config.yaml run &

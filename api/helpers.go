@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -95,17 +94,8 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-// createJSONFile create a JSON file on the direct file path name
-func createJSONFile(file string, data interface{}) error {
-	out, err := json.MarshalIndent(data, "", " ")
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(file, out, 0400)
-}
-
 // TODO: To remove the duplication here. We don't need separate function for each file
-func createDockerComposeFile(absolutepath string, s Service) error {
+func createDockerComposeFile(absolutepath string, s service) error {
 	outputPath := filepath.Join(absolutepath, "docker-compose.yml")
 	// Create the file:
 	f, err := os.Create(outputPath)
@@ -129,53 +119,13 @@ func createDockerComposeFile(absolutepath string, s Service) error {
 		Secret       string
 	}{
 		projectDir,
-		s.userID,
-		s.architecture,
-		s.name,
+		s.UserID,
+		s.Architecture,
+		s.Name,
 		5432,
-		s.tunnel.Secret,
+		"replaceme",
 	}
 	err = templ.Execute(f, data)
-	if err != nil {
-		return fmt.Errorf("ERROR: executing template file %v", err)
-	}
-	return nil
-}
-
-func createDockerfile(absolutepath string, s Service) error {
-	outputPath := filepath.Join(absolutepath, "Dockerfile")
-	// Create the file:
-	f, err := os.Create(outputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	defer f.Close() // don't forget to close the file when finished.
-	templ, err := template.ParseFiles("Dockerfile-template")
-	if err != nil {
-		return fmt.Errorf("ERROR: parsing template file %v", err)
-	}
-	err = templ.Execute(f, s)
-	if err != nil {
-		return fmt.Errorf("ERROR: executing template file %v", err)
-	}
-	return nil
-}
-
-func createConfigfile(absolutepath string, s Service) error {
-	outputPath := filepath.Join(absolutepath, "config.yaml")
-	// Create the file:
-	f, err := os.Create(outputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	defer f.Close() // don't forget to close the file when finished.
-	templ, err := template.ParseFiles("config-template.yaml")
-	if err != nil {
-		return fmt.Errorf("ERROR: parsing template file %v", err)
-	}
-	err = templ.Execute(f, s)
 	if err != nil {
 		return fmt.Errorf("ERROR: executing template file %v", err)
 	}

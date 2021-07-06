@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -15,5 +17,12 @@ func main() {
 	http.HandleFunc("/hello", a)
 	http.HandleFunc("/createservice", api.CreateService)
 	http.HandleFunc("/githubAuth", api.GithubAuth)
-	http.ListenAndServe("localhost:3001", nil)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Hello Secure World")
+	})
+	err := http.ListenAndServe("localhost:3001", nil)
+	if err != nil {
+		log.Fatalf("FATAL: starting server %v", err)
+	}
 }
