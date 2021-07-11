@@ -1,25 +1,44 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"time"
+
+	"github.com/cloudflare/cloudflare-go"
+	"github.com/spinup-host/internal"
 )
 
 var accountID, zoneID, projectDir, architecture string
+var api *cloudflare.API
 
 func init() {
 	var ok bool
+	var err error
 	if projectDir, ok = os.LookupEnv("SPINUP_PROJECT_DIR"); !ok {
 		log.Fatalf("FATAL: getting environment variable SPINUP_PROJECT_DIR")
 	}
 	if architecture, ok = os.LookupEnv("ARCHITECTURE"); !ok {
 		log.Fatalf("FATAL: getting environment variable ARCHITECTURE")
 	}
+	// MYSTERY: there is api.accountID but its always empty. Need to figure why. Until then we are explicity passing account id
+	if accountID, ok = os.LookupEnv("CF_ACCOUNT_ID"); !ok {
+		log.Fatalf("FATAL: getting environment variable CF_ACCOUNT_ID")
+	}
+	if zoneID, ok = os.LookupEnv("CF_ZONE_ID"); !ok {
+		log.Fatalf("FATAL: getting environment variable CF_ZONE_ID")
+	}
+	api, err = cloudflare.New(os.Getenv("CF_API_KEY"), os.Getenv("CF_API_EMAIL"))
+	if err != nil {
+		log.Fatalf("FATAL: creating new cloudflare client %v", err)
+	}
+	log.Println("INFO: initial validations successful")
 }
 
 type service struct {
@@ -59,8 +78,33 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	if err = prepareService(s); err != nil {
 		log.Printf("ERROR: preparing service for %s %v", s.UserID, err)
 		http.Error(w, "Error preparing service", 500)
+		return
 	}
-	return
+	if err = startService(s); err != nil {
+		log.Printf("ERROR: starting service for %s %v", s.UserID, err)
+		http.Error(w, "Error starting service", 500)
+		return
+	}
+	log.Printf("INFO: created service for user %s", s.UserID)
+	err = connectService(s)
+	if err != nil {
+		log.Printf("ERROR: connecting service for %s %v", s.UserID, err)
+		http.Error(w, "Error connecting service", 500)
+		return
+	}
+	err = internal.UpdateTunnelClient()
+	if err != nil {
+		log.Printf("ERROR: updating tunnel client for %s %v", s.UserID, err)
+		http.Error(w, "Error updating tunnel client", 500)
+		return
+	}
+	err = internal.RestartTunnelClient()
+	if err != nil {
+		log.Printf("ERROR: restarting tunnel client for %s %v", s.UserID, err)
+		http.Error(w, "Error restarting tunnel client", 500)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func prepareService(s service) error {
@@ -71,5 +115,54 @@ func prepareService(s service) error {
 	if err := createDockerComposeFile(projectDir+"/"+s.UserID+"/", s); err != nil {
 		return fmt.Errorf("ERROR: creating service docker-compose file %v", err)
 	}
+	return nil
+}
+
+func startService(s service) error {
+	err := ValidateSystemRequirements()
+	if err != nil {
+		return err
+	}
+	err = ValidateDockerCompose(projectDir + "/" + s.UserID)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("docker-compose", "-f", projectDir+"/"+s.UserID+"/docker-compose.yml", "up", "-d")
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateDockerCompose(path string) error {
+	cmd := exec.Command("docker-compose", "-f", path+"/docker-compose.yml", "config")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("validating docker-compose file %v", err)
+	}
+	return nil
+}
+
+func ValidateSystemRequirements() error {
+	cmd := exec.Command("which", "docker-compose")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("docker-compose doesn't exist %v", err)
+	}
+	cmd = exec.Command("which", "docker")
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func connectService(s service) error {
+	_, err := api.CreateDNSRecord(context.Background(), zoneID, cloudflare.DNSRecord{
+		Type:    "A",
+		Name:    s.UserID,
+		Content: "34.203.202.32",
+	})
+	if err != nil {
+		return err
+	}
+	log.Printf("INFO: DNS record created for %s ", s.UserID)
 	return nil
 }
