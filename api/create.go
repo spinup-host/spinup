@@ -15,7 +15,7 @@ import (
 	"github.com/spinup-host/internal"
 )
 
-var accountID, zoneID, projectDir, architecture string
+var authToken, zoneID, projectDir, architecture string
 var api *cloudflare.API
 
 func init() {
@@ -27,14 +27,13 @@ func init() {
 	if architecture, ok = os.LookupEnv("ARCHITECTURE"); !ok {
 		log.Fatalf("FATAL: getting environment variable ARCHITECTURE")
 	}
-	// MYSTERY: there is api.accountID but its always empty. Need to figure why. Until then we are explicity passing account id
-	if accountID, ok = os.LookupEnv("CF_ACCOUNT_ID"); !ok {
-		log.Fatalf("FATAL: getting environment variable CF_ACCOUNT_ID")
+	if authToken, ok = os.LookupEnv("CF_AUTHORIZATION_TOKEN"); !ok {
+		log.Fatalf("FATAL: getting environment variable CF_AUTHORIZATION_TOKEN")
 	}
 	if zoneID, ok = os.LookupEnv("CF_ZONE_ID"); !ok {
 		log.Fatalf("FATAL: getting environment variable CF_ZONE_ID")
 	}
-	api, err = cloudflare.New(os.Getenv("CF_API_KEY"), os.Getenv("CF_API_EMAIL"))
+	api, err = cloudflare.NewWithAPIToken(authToken)
 	if err != nil {
 		log.Fatalf("FATAL: creating new cloudflare client %v", err)
 	}
