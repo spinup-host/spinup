@@ -98,12 +98,6 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error updating tunnel client", 500)
 		return
 	}
-	err = internal.RestartTunnelClient()
-	if err != nil {
-		log.Printf("ERROR: restarting tunnel client for %s %v", s.UserID, err)
-		http.Error(w, "Error restarting tunnel client", 500)
-		return
-	}
 	w.WriteHeader(http.StatusOK)
 }
 
