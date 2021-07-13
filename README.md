@@ -52,3 +52,38 @@ curl -X POST http://localhost:8090/createservice \
     - Code: 401 UNAUTHORIZED
 
         Content: `{ error : "You are unauthorized to make this request." }`
+
+### Create Service
+
+- URL
+
+/createservice
+
+- Method:
+
+`POST`
+
+- Data Params
+
+```
+{
+    "code": "githubcode"
+    "name": "postgres",
+    "duration": 200,
+    "resource":
+        {
+            "memory": "32MB",
+            "storage": 200,
+            "version": 
+                {"maj":9,"min":6}
+        },
+    "userid": "replaceme"
+}
+```
+
+- Success Response:
+    - Code: 200
+
+- Error Response:
+
+    - Code: 500 INTERNALSERVER ERROR
