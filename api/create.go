@@ -55,7 +55,11 @@ func Hello(w http.ResponseWriter, req *http.Request) {
 }
 
 func CreateService(w http.ResponseWriter, req *http.Request) {
-	if req.Method != "POST" {
+	enableCors(&w)
+	if (*req).Method == "OPTIONS" {
+		return
+	}
+	if (*req).Method != "POST" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
@@ -158,4 +162,10 @@ func connectService(s service) error {
 	}
 	log.Printf("INFO: DNS record created for %s ", s.UserID)
 	return nil
+}
+
+func enableCors(w *http.ResponseWriter) {
+	// TODO: to remove the wildcard and control it to specific host
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 }
