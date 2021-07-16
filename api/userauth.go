@@ -9,6 +9,10 @@ import (
 )
 
 func GithubAuth(w http.ResponseWriter, r *http.Request) {
+	/* 	enableCors(&w)
+	   	if (*r).Method == "OPTIONS" {
+	   		return
+	   	} */
 	if r.Method != "POST" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
@@ -16,12 +20,13 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	type userAuth struct {
 		Code string `json:"code"`
 	}
-
+	log.Println("inside githubauth::")
 	type githubAuth struct {
 		Code         string `json:"code"`
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 	}
+	log.Println("req::", r.Body)
 	var ua userAuth
 	// TODO: format this to include best practices https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
 	err := json.NewDecoder(r.Body).Decode(&ua)
@@ -29,6 +34,7 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Println("ua", ua)
 	clientID, ok := os.LookupEnv("CLIENT_ID")
 	if !ok {
 		log.Fatalf("FATAL: getting environment variable CLIENT_ID")
@@ -37,6 +43,7 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		log.Fatalf("FATAL: getting environment variable CLIENT_SECRET")
 	}
+	log.Println("req::", r.Body)
 	requestBodyMap := map[string]string{"client_id": clientID, "client_secret": clientSecret, "code": ua.Code}
 	requestBodyJSON, err := json.Marshal(requestBodyMap)
 	if err != nil {

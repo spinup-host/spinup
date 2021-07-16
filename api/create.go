@@ -55,10 +55,10 @@ func Hello(w http.ResponseWriter, req *http.Request) {
 }
 
 func CreateService(w http.ResponseWriter, req *http.Request) {
-	enableCors(&w)
-	if (*req).Method == "OPTIONS" {
-		return
-	}
+	/* 	enableCors(&w)
+	   	if (*req).Method == "OPTIONS" {
+	   		return
+	   	} */
 	if (*req).Method != "POST" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
@@ -166,6 +166,7 @@ func connectService(s service) error {
 
 func enableCors(w *http.ResponseWriter) {
 	// TODO: to remove the wildcard and control it to specific host
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Origin", "spinup.host")
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
