@@ -16,6 +16,8 @@ func main() {
 	mux.HandleFunc("/hello", api.Hello)
 	mux.HandleFunc("/createservice", api.CreateService)
 	mux.HandleFunc("/githubAuth", api.GithubAuth)
+	mux.HandleFunc("/logs", api.Logs)
+	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	// TODO: remove http version
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://spinup.host", "http://spinup.host"},
