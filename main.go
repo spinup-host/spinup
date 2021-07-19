@@ -20,9 +20,9 @@ func main() {
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	// TODO: remove http version
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://spinup.host", "http://spinup.host"},
+		AllowedOrigins: []string{"https://spinup.host", "http://spinup.host", "http://app.spinup.host", "https://app.spinup.host", "localhost:3000"},
 	})
-	err := http.ListenAndServe("localhost:3001", c.Handler(mux))
+	err := http.ListenAndServe("localhost:443", c.Handler(mux))
 	if err != nil {
 		log.Fatalf("FATAL: starting server %v", err)
 	}
