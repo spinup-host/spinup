@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -73,10 +74,6 @@ func Hello(w http.ResponseWriter, req *http.Request) {
 }
 
 func CreateService(w http.ResponseWriter, req *http.Request) {
-	/* 	enableCors(&w)
-	   	if (*req).Method == "OPTIONS" {
-	   		return
-	   	} */
 	if (*req).Method != "POST" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
@@ -94,7 +91,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "currently we don't support %s", s.Name)
 		return
 	}
-	s.Port = 5432
+	s.Port = nextAvailablePort()
 	s.Architecture = architecture
 	if err = prepareService(s); err != nil {
 		log.Printf("ERROR: preparing service for %s %v", s.UserID, err)
@@ -182,9 +179,17 @@ func connectService(s service) error {
 	return nil
 }
 
-func enableCors(w *http.ResponseWriter) {
-	// TODO: to remove the wildcard and control it to specific host
-	(*w).Header().Set("Access-Control-Allow-Origin", "spinup.host")
-	(*w).Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+func nextAvailablePort() uint {
+	var port uint
+	endingPort := 5440
+	for startingPort := 5432; startingPort < endingPort; startingPort++ {
+		_, err := net.DialTimeout("tcp", ":"+string(startingPort), 3*time.Second)
+		if err != nil {
+			log.Printf("INFO: port %d already taken", startingPort)
+			continue
+		}
+		port = uint(startingPort)
+		break
+	}
+	return port
 }
