@@ -8,11 +8,21 @@ import (
 	"os"
 )
 
+type user struct {
+	Username  string `json:"login"`
+	AvatarURL string `json:"avatar_url"`
+	Name      string `json:"name"`
+	Token     string `json:"token"`
+	JWTToken  string `json:"jwttoken"`
+}
+
+type githubAccess struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	Scope       string `json:"scope"`
+}
+
 func GithubAuth(w http.ResponseWriter, r *http.Request) {
-	/* 	enableCors(&w)
-	   	if (*r).Method == "OPTIONS" {
-	   		return
-	   	} */
 	if r.Method != "POST" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
@@ -67,11 +77,6 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		// http.Error(w, "ERROR: likely user code is invalid", http.StatusInternalServerError)
 		// return
 	}
-	type githubAccess struct {
-		AccessToken string `json:"access_token"`
-		TokenType   string `json:"token_type"`
-		Scope       string `json:"scope"`
-	}
 	var ghAccessToken githubAccess
 	err = json.NewDecoder(res.Body).Decode(&ghAccessToken)
 	if err != nil {
@@ -89,18 +94,18 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	defer res.Body.Close()
 	// TODO: Do we need token field? Token is meant for the backend to communicate to Github
-	type user struct {
-		Username  string `json:"login"`
-		AvatarURL string `json:"avatar_url"`
-		Name      string `json:"name"`
-		Token     string `json:"token"`
-	}
 	var u user
 	err = json.NewDecoder(res.Body).Decode(&u)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	JWTToken, err := stringToJWT(u.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	u.JWTToken = JWTToken
 	userJSON, err := json.Marshal(u)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

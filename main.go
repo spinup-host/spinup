@@ -17,6 +17,8 @@ func main() {
 	mux.HandleFunc("/createservice", api.CreateService)
 	mux.HandleFunc("/githubAuth", api.GithubAuth)
 	mux.HandleFunc("/logs", api.Logs)
+	mux.HandleFunc("/jwt", api.JWT)
+	mux.HandleFunc("/jwtdecode", api.JWTDecode)
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	// TODO: remove http version
 	c := cors.New(cors.Options{

@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/cloudflare/cloudflare-go v0.14.0
+	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/gorilla/websocket v1.4.2
