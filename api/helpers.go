@@ -122,7 +122,7 @@ func createDockerComposeFile(absolutepath string, s service) error {
 		s.UserID,
 		s.Architecture,
 		s.Name,
-		5432,
+		s.Port,
 		"replaceme",
 	}
 	err = templ.Execute(f, data)
