@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,11 +13,17 @@ import (
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/spinup-host/internal"
 )
 
 var authToken, zoneID, projectDir, architecture string
 var api *cloudflare.API
+var privKeyPath, pubKeyPath string
+var (
+	verifyKey *rsa.PublicKey
+	signKey   *rsa.PrivateKey
+)
 
 func init() {
 	var ok bool
@@ -37,6 +44,17 @@ func init() {
 	if err != nil {
 		log.Fatalf("FATAL: creating new cloudflare client %v", err)
 	}
+
+	signBytes, err := ioutil.ReadFile(projectDir + "/app.rsa")
+	fatal(err)
+
+	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes)
+	fatal(err)
+	verifyBytes, err := ioutil.ReadFile(projectDir + "/app.rsa.pub")
+	fatal(err)
+
+	verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
+	fatal(err)
 	log.Println("INFO: initial validations successful")
 }
 
