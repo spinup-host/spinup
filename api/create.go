@@ -60,13 +60,22 @@ func init() {
 }
 
 type service struct {
-	Name     string
 	Duration time.Duration
-	Resource map[string]interface{}
 	UserID   string
 	// one of arm64v8 or arm32v7 or amd64
 	Architecture string
-	Port         uint
+	//Port         uint
+	db dbCluster
+}
+
+type dbCluster struct {
+	Name       string
+	Type       string
+	Port       uint
+	MajVersion uint
+	MinVersion uint
+	Memory     string
+	Storage    string
 }
 
 func Hello(w http.ResponseWriter, req *http.Request) {
@@ -87,11 +96,11 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Fatalf("fatal: reading from readall body %v", req.Body)
 	}
-	if s.Name != "postgres" {
-		fmt.Fprintf(w, "currently we don't support %s", s.Name)
+	if s.db.Type != "postgres" {
+		fmt.Fprintf(w, "currently we don't support %s", s.db.Type)
 		return
 	}
-	s.Port = nextAvailablePort()
+	s.db.Port = nextAvailablePort()
 	s.Architecture = architecture
 	if err = prepareService(s); err != nil {
 		log.Printf("ERROR: preparing service for %s %v", s.UserID, err)
@@ -120,11 +129,12 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 }
 
 func prepareService(s service) error {
-	err := os.Mkdir(projectDir+"/"+s.UserID, 0755)
+	servicePath := projectDir + "/" + s.UserID + "/" + s.db.Name
+	err := os.Mkdir(servicePath, 0755)
 	if err != nil {
-		return fmt.Errorf("ERROR: creating project directory at %s", projectDir+"/"+s.UserID)
+		return fmt.Errorf("ERROR: creating project directory at %s", servicePath)
 	}
-	if err := createDockerComposeFile(projectDir+"/"+s.UserID+"/", s); err != nil {
+	if err := createDockerComposeFile(servicePath, s); err != nil {
 		return fmt.Errorf("ERROR: creating service docker-compose file %v", err)
 	}
 	return nil
@@ -169,13 +179,13 @@ func ValidateSystemRequirements() error {
 func connectService(s service) error {
 	_, err := api.CreateDNSRecord(context.Background(), zoneID, cloudflare.DNSRecord{
 		Type:    "A",
-		Name:    s.UserID,
+		Name:    s.UserID + "-" + s.db.Name,
 		Content: "34.203.202.32",
 	})
 	if err != nil {
 		return err
 	}
-	log.Printf("INFO: DNS record created for %s ", s.UserID)
+	log.Printf("INFO: DNS record created for %s ", s.UserID+"-"+s.db.Name)
 	return nil
 }
 
