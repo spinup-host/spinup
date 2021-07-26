@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
@@ -87,6 +88,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
+	userId, err := validateToken(*req)
 	var s service
 	byteArray, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -95,6 +97,10 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	err = json.Unmarshal(byteArray, &s)
 	if err != nil {
 		log.Fatalf("fatal: reading from readall body %v", req.Body)
+	}
+	if s.UserID != userId {
+		fmt.Fprintf(w, "user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
+		return
 	}
 	if s.db.Type != "postgres" {
 		fmt.Fprintf(w, "currently we don't support %s", s.db.Type)
@@ -202,4 +208,15 @@ func nextAvailablePort() uint {
 		break
 	}
 	return port
+}
+
+func validateToken(r http.Request) (string, error) {
+	reqToken := r.Header.Get("Authorization")
+	splitToken := strings.Split(reqToken, "Bearer ")
+	reqToken = splitToken[1]
+	userID, err := JWTToString(reqToken)
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
 }
