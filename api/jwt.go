@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -41,6 +42,21 @@ func stringToJWT(text string) (string, error) {
 		return "", err
 	}
 	return jwt, nil
+}
+
+func JWTToString(tokenString string) (string, error) {
+	keyFunc := func(t *jwt.Token) (interface{}, error) {
+		return verifyKey, nil
+	}
+	claims := &claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
+	if err != nil {
+		return "", err
+	}
+	if !token.Valid {
+		return "", errors.New("invalid token")
+	}
+	return claims.Text, nil
 }
 
 // TODO: vicky to remove this handler after the testing
