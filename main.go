@@ -22,7 +22,8 @@ func main() {
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	// TODO: remove http version
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://spinup.host", "http://spinup.host", "http://app.spinup.host", "https://app.spinup.host", "localhost:3000"},
+		AllowedOrigins: []string{"https://app.spinup.host", "localhost:3000"},
+		AllowedHeaders: []string{"authorization", "content-type"},
 	})
 	err := http.ListenAndServe("localhost:443", c.Handler(mux))
 	if err != nil {

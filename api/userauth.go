@@ -100,7 +100,7 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	JWTToken, err := stringToJWT(u.Name)
+	JWTToken, err := stringToJWT(u.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

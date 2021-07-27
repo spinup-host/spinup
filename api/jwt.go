@@ -25,6 +25,7 @@ type claims struct {
 func stringToJWT(text string) (string, error) {
 	// Declare the expiration time of the token
 	// here, we have kept it as 2 days
+	log.Println("string to JWTify:", text)
 	expirationTime := time.Now().Add(48 * time.Hour)
 	// Create the JWT claims, which includes the text and expiry time
 	claims := &claims{
@@ -49,6 +50,7 @@ func JWTToString(tokenString string) (string, error) {
 		return verifyKey, nil
 	}
 	claims := &claims{}
+	log.Println("JWT to string:", tokenString)
 	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
 	if err != nil {
 		return "", err
@@ -56,6 +58,7 @@ func JWTToString(tokenString string) (string, error) {
 	if !token.Valid {
 		return "", errors.New("invalid token")
 	}
+	log.Println("claims", claims.Text)
 	return claims.Text, nil
 }
 
@@ -72,18 +75,11 @@ func JWT(w http.ResponseWriter, r *http.Request) {
 
 func JWTDecode(w http.ResponseWriter, r *http.Request) {
 	jwttoken := r.Header.Get("jwttoken")
-	keyFunc := func(t *jwt.Token) (interface{}, error) {
-		return verifyKey, nil
-	}
-	claims := &claims{}
-	token, err := jwt.ParseWithClaims(jwttoken, claims, keyFunc)
+	text, err := JWTToString(jwttoken)
 	if err != nil {
+		log.Printf("error jwtdecode %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if !token.Valid {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	w.Write([]byte(claims.Text))
+	w.Write([]byte(text))
 }
