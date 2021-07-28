@@ -2,7 +2,7 @@
 version: "3.9"
 services:
   postgres:
-    image: {{ .Architecture }}/{{ .Name }}
+    image: {{ .Architecture }}/{{ .Type }}
     restart: unless-stopped
     ports:
       - "{{ .Port }}:5432"

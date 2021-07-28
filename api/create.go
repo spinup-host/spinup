@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/rsa"
 	"encoding/json"
@@ -79,6 +80,11 @@ type dbCluster struct {
 	Storage    string
 }
 
+type serviceResponse struct {
+	HostName string
+	Port     uint
+}
+
 func Hello(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello !! Welcome to spinup \n")
 }
@@ -112,14 +118,15 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "db type is currently not supported", 500)
 		return
 	}
-	s.Db.Port = nextAvailablePort()
+	s.Db.Port, err = portcheck()
 	s.Architecture = architecture
-	if err = prepareService(s); err != nil {
+	servicePath := projectDir + "/" + s.UserID + "/" + s.Db.Name
+	if err = prepareService(s, servicePath); err != nil {
 		log.Printf("ERROR: preparing service for %s %v", s.UserID, err)
 		http.Error(w, "Error preparing service", 500)
 		return
 	}
-	if err = startService(s); err != nil {
+	if err = startService(s, servicePath); err != nil {
 		log.Printf("ERROR: starting service for %s %v", s.UserID, err)
 		http.Error(w, "Error starting service", 500)
 		return
@@ -131,38 +138,55 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error connecting service", 500)
 		return
 	}
-	err = internal.UpdateTunnelClient()
+	err = internal.UpdateTunnelClient(s.Db.Port)
 	if err != nil {
 		log.Printf("ERROR: updating tunnel client for %s %v", s.UserID, err)
 		http.Error(w, "Error updating tunnel client", 500)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	var serRes serviceResponse
+	serRes.HostName = s.UserID + "-" + s.Db.Name + ".spinup.host"
+	port, _ := portcheck()
+	serRes.Port = port
+	jsonBody, err := json.Marshal(serRes)
+	if err != nil {
+		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
+		http.Error(w, "Internal server error ", 500)
+		return
+	}
+	w.Write(jsonBody)
 }
 
-func prepareService(s service) error {
-	servicePath := projectDir + "/" + s.UserID + "/" + s.Db.Name
-	err := os.Mkdir(servicePath, 0755)
+func prepareService(s service, path string) error {
+	err := os.MkdirAll(path, 0755)
 	if err != nil {
-		return fmt.Errorf("ERROR: creating project directory at %s", servicePath)
+		return fmt.Errorf("ERROR: creating project directory at %s", path)
 	}
-	if err := createDockerComposeFile(servicePath, s); err != nil {
+	if err := createDockerComposeFile(path, s); err != nil {
 		return fmt.Errorf("ERROR: creating service docker-compose file %v", err)
 	}
 	return nil
 }
 
-func startService(s service) error {
+func startService(s service, path string) error {
 	err := ValidateSystemRequirements()
 	if err != nil {
 		return err
 	}
-	err = ValidateDockerCompose(projectDir + "/" + s.UserID)
+	err = ValidateDockerCompose(path)
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("docker-compose", "-f", projectDir+"/"+s.UserID+"/docker-compose.yml", "up", "-d")
-	if err := cmd.Run(); err != nil {
+	cmd := exec.Command("docker-compose", "-f", path+"/docker-compose.yml", "up", "-d")
+	// https://stackoverflow.com/questions/18159704/how-to-debug-exit-status-1-error-when-running-exec-command-in-golang/18159705
+	// To print the actual error instead of just printing the exit status
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		return err
 	}
 	return nil
@@ -201,19 +225,21 @@ func connectService(s service) error {
 	return nil
 }
 
-func nextAvailablePort() uint {
-	var port uint
+func portcheck() (uint, error) {
 	endingPort := 5440
 	for startingPort := 5432; startingPort < endingPort; startingPort++ {
-		_, err := net.DialTimeout("tcp", ":"+string(startingPort), 3*time.Second)
-		if err != nil {
-			log.Printf("INFO: port %d already taken", startingPort)
-			continue
+		target := fmt.Sprintf("%s:%d", "localhost", startingPort)
+		_, err := net.DialTimeout("tcp", target, 3*time.Second)
+		if err != nil && !strings.Contains(err.Error(), "connect: connection refused") {
+			log.Printf("INFO: error on port scanning %d %v", startingPort, err)
+			return 0, err
 		}
-		port = uint(startingPort)
-		break
+		if err != nil && strings.Contains(err.Error(), "connect: connection refused") {
+			log.Printf("INFO: port %d is unused", startingPort)
+			return uint(startingPort), nil
+		}
 	}
-	return port
+	return 0, nil
 }
 
 func validateToken(r http.Request) (string, error) {
