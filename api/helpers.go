@@ -111,17 +111,15 @@ func createDockerComposeFile(absolutepath string, s service) error {
 	// TODO: not sure is there a better way to pass data to template
 	// A lot of this data is redundant. Already available in Service struct
 	data := struct {
-		Path         string
 		UserID       string
 		Architecture string
-		Name         string
+		Type         string
 		Port         uint
 		Secret       string
 	}{
-		projectDir,
 		s.UserID,
 		s.Architecture,
-		s.Db.Name,
+		s.Db.Type,
 		s.Db.Port,
 		"replaceme",
 	}
