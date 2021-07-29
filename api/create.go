@@ -73,7 +73,7 @@ type service struct {
 type dbCluster struct {
 	Name       string
 	Type       string
-	Port       uint
+	Port       int
 	MajVersion uint
 	MinVersion uint
 	Memory     string
@@ -82,7 +82,7 @@ type dbCluster struct {
 
 type serviceResponse struct {
 	HostName string
-	Port     uint
+	Port     int
 }
 
 func Hello(w http.ResponseWriter, req *http.Request) {
@@ -138,7 +138,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error connecting service", 500)
 		return
 	}
-	err = internal.UpdateTunnelClient(s.Db.Port)
+	err = internal.UpdateTunnelClientYml(s.Db.Name, s.Db.Port)
 	if err != nil {
 		log.Printf("ERROR: updating tunnel client for %s %v", s.UserID, err)
 		http.Error(w, "Error updating tunnel client", 500)
@@ -146,8 +146,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	}
 	var serRes serviceResponse
 	serRes.HostName = s.UserID + "-" + s.Db.Name + ".spinup.host"
-	port, _ := portcheck()
-	serRes.Port = port
+	serRes.Port = s.Db.Port
 	jsonBody, err := json.Marshal(serRes)
 	if err != nil {
 		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
@@ -225,7 +224,7 @@ func connectService(s service) error {
 	return nil
 }
 
-func portcheck() (uint, error) {
+func portcheck() (int, error) {
 	endingPort := 5440
 	for startingPort := 5432; startingPort < endingPort; startingPort++ {
 		target := fmt.Sprintf("%s:%d", "localhost", startingPort)
@@ -236,10 +235,11 @@ func portcheck() (uint, error) {
 		}
 		if err != nil && strings.Contains(err.Error(), "connect: connection refused") {
 			log.Printf("INFO: port %d is unused", startingPort)
-			return uint(startingPort), nil
+			return startingPort, nil
 		}
 	}
-	return 0, nil
+	log.Printf("WARN: all allocated ports are occupied")
+	return 0, fmt.Errorf("error all allocated ports are occupied")
 }
 
 func validateToken(r http.Request) (string, error) {
