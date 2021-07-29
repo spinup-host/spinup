@@ -114,7 +114,7 @@ func createDockerComposeFile(absolutepath string, s service) error {
 		UserID       string
 		Architecture string
 		Type         string
-		Port         uint
+		Port         int
 		Secret       string
 	}{
 		s.UserID,
