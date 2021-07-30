@@ -1,7 +1,17 @@
 # SPINUP
 
-An alternative to RDS
+An open source alternative to [AWS RDS](https://aws.amazon.com/rds/), [Cloud SQL](https://cloud.google.com/sql). 
 
+## Arhictecture
+
+The idea is simple. Spinup creates multiple containers through docker-compose. 
+Spinup can be deployed anywhere. Only requirement is docker-compose. It can run on anywhere [Digital Ocean droplet](https://www.digitalocean.com/products/droplets/), [Azure Compute](https://azure.microsoft.com/en-us/product-categories/compute/), [Oracle Compute](https://www.oracle.com/cloud/compute/), [Raspberry Pi](https://www.raspberrypi.org/) etc. 
+
+We are currently using Github Authentication. We should be able to support other authentication methods.
+
+Currently we only support Postgres dbms, but we should be able to support other open source databases like [MySQL](https://www.mysql.com/), [MariaDB](https://mariadb.org/) etc.
+
+![architecture](architecture.jpeg)
 ### How to run
 
 It requires a bunch of environment variables. You can export them and run using
