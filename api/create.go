@@ -81,8 +81,9 @@ type dbCluster struct {
 }
 
 type serviceResponse struct {
-	HostName string
-	Port     int
+	HostName    string
+	Port        int
+	ContainerID string
 }
 
 func Hello(w http.ResponseWriter, req *http.Request) {
@@ -144,9 +145,16 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error updating tunnel client", 500)
 		return
 	}
+	containerID, err := lastContainerID()
+	if err != nil {
+		log.Printf("ERROR: getting container id %v", err)
+		http.Error(w, "Error getting container id", 500)
+		return
+	}
 	var serRes serviceResponse
 	serRes.HostName = s.UserID + "-" + s.Db.Name + ".spinup.host"
 	serRes.Port = s.Db.Port
+	serRes.ContainerID = containerID
 	jsonBody, err := json.Marshal(serRes)
 	if err != nil {
 		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
@@ -240,6 +248,15 @@ func portcheck() (int, error) {
 	}
 	log.Printf("WARN: all allocated ports are occupied")
 	return 0, fmt.Errorf("error all allocated ports are occupied")
+}
+
+func lastContainerID() (string, error) {
+	cmd := exec.Command("/bin/bash", "-c", "sudo docker ps --last 1 -q")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
 }
 
 func validateToken(r http.Request) (string, error) {
