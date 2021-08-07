@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/cloudflare/cloudflare-go"
 	"github.com/golang-jwt/jwt"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spinup-host/internal"
 )
 
@@ -161,6 +163,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
+	updateSqliteDB(projectDir, s.UserID, containerID)
 	w.Write(jsonBody)
 }
 
@@ -268,4 +271,34 @@ func validateToken(r http.Request) (string, error) {
 		return "", err
 	}
 	return userID, nil
+}
+
+func updateSqliteDB(path, dbName, data string) {
+	db, err := sql.Open("sqlite3", path+"/"+dbName+".db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	sqlStmt := `
+	create table clusterInfo (id integer not null primary key, clusterId text);
+	`
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		log.Printf("%q: %s\n", err, sqlStmt)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt, err := tx.Prepare("insert into clusterInfo(id, clusterId) values(?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(1, data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tx.Commit()
+	return
 }
