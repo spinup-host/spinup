@@ -14,10 +14,27 @@ Currently we only support Postgres dbms, but we should be able to support other 
 ![architecture](architecture.jpeg)
 ### How to run
 
-It requires a bunch of environment variables. You can export them and run using
+It requires a bunch of environment variables. You can export them and run using. Also change the port to a higher number if you don't run the program as `root` user.
 
 ```
-export SPINUP_PROJECT_DIR=/Your/Project/Dir && export ARCHITECTURE=architecture && go run main.go
+export SPINUP_PROJECT_DIR=/tmp/spinuplocal && export ARCHITECTURE=architecture && export CF_AUTHORIZATION_TOKEN=replaceme  && export CF_ZONE_ID=replaceme && export CLIENT_ID=replaceme && export CLIENT_SECRET=replaceme && go run main.go
+```
+
+You need to have a private and public key that you can create using OpenSSL:
+
+**To create a private key**
+```
+visi@visis-MacBook-Pro spinup % openssl genrsa -out /tmp/spinuplocal/app.rsa 4096 
+Generating RSA private key, 4096 bit long modulus
+...++
+...................++
+e is 65537 (0x10001)
+```
+
+**To create a public key**
+```
+visi@visis-MacBook-Pro spinup % openssl rsa -in /tmp/spinuplocal/app.rsa -pubout > /tmp/spinuplocal/app.rsa.pub
+writing RSA key
 ```
 
 On another terminal create a POST request using
