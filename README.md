@@ -17,8 +17,16 @@ Currently we only support Postgres dbms, but we should be able to support other 
 It requires a bunch of environment variables. You can export them and run using. Also change the port to a higher number if you don't run the program as `root` user.
 
 ```
-export SPINUP_PROJECT_DIR=/tmp/spinuplocal && export ARCHITECTURE=architecture && export CF_AUTHORIZATION_TOKEN=replaceme  && export CF_ZONE_ID=replaceme && export CLIENT_ID=replaceme && export CLIENT_SECRET=replaceme && go run main.go
+export SPINUP_PROJECT_DIR=/tmp/spinuplocal && export ARCHITECTURE=amd64 && export CF_AUTHORIZATION_TOKEN=replaceme  && export CF_ZONE_ID=replaceme && export CLIENT_ID=replaceme && export CLIENT_SECRET=replaceme && go run main.go
 ```
+
+* SPINUP_PROJECT_DIR - The project directory which stores config and data files.
+* ARCHITECTURE - What architecture that your system is.
+valid values: arm32v7, amd64
+* CF_AUTHORIZATION_TOKEN - Cloudflare authorization token for manipulating DNS records
+* CF_ZONE_ID - Cloudflare zone id
+* CLIENT_ID - Github client id
+* CLIENT_SECRET - Github client secret
 
 You need to have a private and public key that you can create using OpenSSL:
 
@@ -39,9 +47,17 @@ writing RSA key
 
 On another terminal create a POST request using
 ```
-curl -X POST http://localhost:8090/createservice \
+curl -X POST http://localhost:8000/createservice \
     -H "Content-Type: application/json" \
-    --data '{"name": "postgres","duration": 200,"resource":{"memory": "32MB","storage": 200,"version": {"maj":9,"min":6}},"userid": "replaceme"}'
+    -H "Authorization: Bearer reaplaceyourtokenhere" \
+    --data '{
+        "userId": "viggy28",
+        "db": {
+            "type": "postgres",
+            "name": "localtest"
+            },
+        "version": {"maj":9,"min":6}
+        }'
 ```
 
 ## Endpoints
@@ -114,3 +130,15 @@ curl -X POST http://localhost:8090/createservice \
 - Error Response:
 
     - Code: 500 INTERNALSERVER ERROR
+
+- URL
+
+/jwt?data=replaceme
+
+- Method:
+
+`GET`
+
+- Success Response:
+    - Code: 200
+    - Content: `{jwtofreplaceme}`

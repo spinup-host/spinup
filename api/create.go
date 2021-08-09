@@ -105,11 +105,11 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	var s service
 	byteArray, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		log.Fatalf("fatal: reading from readall body %v", req.Body)
+		log.Fatalf("fatal: reading from readall body %v", err)
 	}
 	err = json.Unmarshal(byteArray, &s)
 	if err != nil {
-		log.Fatalf("fatal: reading from readall body %v", req.Body)
+		log.Fatalf("fatal: reading from readall body %v", err)
 	}
 	if s.UserID != userId {
 		log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
@@ -163,7 +163,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
-	updateSqliteDB(projectDir, s.UserID, containerID)
+	updateSqliteDB(projectDir+"/"+s.UserID, s.UserID, containerID)
 	w.Write(jsonBody)
 }
 
@@ -280,7 +280,7 @@ func updateSqliteDB(path, dbName, data string) {
 	}
 	defer db.Close()
 	sqlStmt := `
-	create table clusterInfo (id integer not null primary key, clusterId text);
+	create table if not exists clusterInfo (id integer not null primary key, clusterId text);
 	`
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
