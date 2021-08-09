@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -64,8 +65,12 @@ func JWTToString(tokenString string) (string, error) {
 
 // TODO: vicky to remove this handler after the testing
 func JWT(w http.ResponseWriter, r *http.Request) {
-	plaintext := r.Header.Get("plaintext")
-	jwtToken, err := stringToJWT(plaintext)
+	query := r.URL.Query()
+	data := query.Get("data")
+	if data == "" {
+		fmt.Println("data is empty")
+	}
+	jwtToken, err := stringToJWT(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
