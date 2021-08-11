@@ -19,36 +19,43 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "error validating token", 500)
 	}
 	dbPath := projectDir + "/" + userId
-	clusterIds := ReadClusterId(dbPath, userId)
-	clusterByte, err := json.Marshal(clusterIds)
+	clusterInfos := ReadClusterInfo(dbPath, userId)
+	clusterByte, err := json.Marshal(clusterInfos)
 	if err != nil {
-		log.Printf("ERROR: marshalling clusterIds %v", err)
+		log.Printf("ERROR: marshalling clusterInfos %v", err)
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
 	w.Write(clusterByte)
 }
 
-func ReadClusterId(path, dbName string) []string {
+type clusterInfo struct {
+	ClusterID string
+	Name      string
+	Port      int
+}
+
+func ReadClusterInfo(path, dbName string) []clusterInfo {
 	db, err := sql.Open("sqlite3", path+"/"+dbName+".db")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	rows, err := db.Query("select clusterId from clusterInfo")
+	rows, err := db.Query("select clusterId, name, port from clusterInfo")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
-	var clusterId string
 	var clusterIds []string
+	var clusterInfos []clusterInfo
+	var cluster clusterInfo
 	for rows.Next() {
-		err = rows.Scan(&clusterId)
+		err = rows.Scan(&cluster.ClusterID, &cluster.Name, &cluster.Port)
 		if err != nil {
 			log.Fatal(err)
 		}
-		clusterIds = append(clusterIds, clusterId)
+		clusterInfos = append(clusterInfos, cluster)
 	}
 	fmt.Println(clusterIds)
-	return clusterIds
+	return clusterInfos
 }

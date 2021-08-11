@@ -74,6 +74,7 @@ type service struct {
 
 type dbCluster struct {
 	Name       string
+	ID         string
 	Type       string
 	Port       int
 	MajVersion uint
@@ -153,6 +154,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error getting container id", 500)
 		return
 	}
+	s.Db.ID = containerID
 	var serRes serviceResponse
 	serRes.HostName = s.UserID + "-" + s.Db.Name + ".spinup.host"
 	serRes.Port = s.Db.Port
@@ -163,7 +165,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
-	updateSqliteDB(projectDir+"/"+s.UserID, s.UserID, containerID)
+	updateSqliteDB(projectDir+"/"+s.UserID, s.UserID, s)
 	w.Write(jsonBody)
 }
 
@@ -273,14 +275,14 @@ func validateToken(r http.Request) (string, error) {
 	return userID, nil
 }
 
-func updateSqliteDB(path, dbName, data string) {
+func updateSqliteDB(path string, dbName string, data service) {
 	db, err := sql.Open("sqlite3", path+"/"+dbName+".db")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 	sqlStmt := `
-	create table if not exists clusterInfo (id integer not null primary key, clusterId text);
+	create table if not exists clusterInfo (id integer not null primary key autoincrement, clusterId text, Name text, Port integer);
 	`
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
@@ -290,15 +292,14 @@ func updateSqliteDB(path, dbName, data string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := tx.Prepare("insert into clusterInfo(id, clusterId) values(?, ?)")
+	stmt, err := tx.Prepare("insert into clusterInfo(clusterId, name, port) values(?, ?, ?)")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(1, data)
+	_, err = stmt.Exec(data.Db.ID, data.Db.Name, data.Db.Port)
 	if err != nil {
 		log.Fatal(err)
 	}
 	tx.Commit()
-	return
 }
