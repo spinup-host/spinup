@@ -1,5 +1,4 @@
 .vscode
 Makefile
 *.service
-internal/*
 app.rsa
