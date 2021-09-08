@@ -19,7 +19,6 @@ import (
 	"github.com/cloudflare/cloudflare-go"
 	"github.com/golang-jwt/jwt"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/spinup-host/internal"
 )
 
 var authToken, zoneID, projectDir, architecture string
@@ -136,7 +135,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	log.Printf("INFO: created service for user %s", s.UserID)
-	err = connectService(s)
+	/* err = connectService(s)
 	if err != nil {
 		log.Printf("ERROR: connecting service for %s %v", s.UserID, err)
 		http.Error(w, "Error connecting service", 500)
@@ -147,7 +146,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		log.Printf("ERROR: updating tunnel client for %s %v", s.UserID, err)
 		http.Error(w, "Error updating tunnel client", 500)
 		return
-	}
+	} */
 	containerID, err := lastContainerID()
 	if err != nil {
 		log.Printf("ERROR: getting container id %v", err)
@@ -156,7 +155,8 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	}
 	s.Db.ID = containerID
 	var serRes serviceResponse
-	serRes.HostName = s.UserID + "-" + s.Db.Name + ".spinup.host"
+	//serRes.HostName = s.UserID + "-" + s.Db.Name + ".spinup.host"
+	serRes.HostName = "localhost"
 	serRes.Port = s.Db.Port
 	serRes.ContainerID = containerID
 	jsonBody, err := json.Marshal(serRes)
@@ -256,7 +256,7 @@ func portcheck() (int, error) {
 }
 
 func lastContainerID() (string, error) {
-	cmd := exec.Command("/bin/bash", "-c", "sudo docker ps --last 1 -q")
+	cmd := exec.Command("/bin/bash", "-c", "docker ps --last 1 -q")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", err

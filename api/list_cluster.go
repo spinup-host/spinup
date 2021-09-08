@@ -3,9 +3,12 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
+	"os"
 )
 
 func ListCluster(w http.ResponseWriter, req *http.Request) {
@@ -14,6 +17,7 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	userId, err := validateToken(*req)
+	log.Println("listcluster")
 	if err != nil {
 		log.Printf("error validating token %v", err)
 		http.Error(w, "error validating token", 500)
@@ -36,7 +40,12 @@ type clusterInfo struct {
 }
 
 func ReadClusterInfo(path, dbName string) []clusterInfo {
-	db, err := sql.Open("sqlite3", path+"/"+dbName+".db")
+	dsn := path + "/" + dbName + ".db"
+	if _, err := os.Stat(dsn); errors.Is(err, fs.ErrNotExist) {
+		log.Printf("INFO: no sqlite database")
+		return nil
+	}
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
