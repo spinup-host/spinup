@@ -22,7 +22,7 @@ func main() {
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	mux.HandleFunc("/listcluster", api.ListCluster)
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://app.spinup.host", "localhost:3000"},
+		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},
 		AllowedHeaders: []string{"authorization", "content-type"},
 	})
 	err := http.ListenAndServe(":4434", c.Handler(mux))

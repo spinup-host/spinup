@@ -59,7 +59,7 @@ func JWTToString(tokenString string) (string, error) {
 	if !token.Valid {
 		return "", errors.New("invalid token")
 	}
-	log.Println("claims", claims.Text)
+	log.Println("claims:", claims.Text)
 	return claims.Text, nil
 }
 
