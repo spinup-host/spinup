@@ -36,10 +36,10 @@ WORKDIR /dist
 RUN cp /build/main .
 
 # Build a small image
-FROM alpine
+FROM docker/compose
 
 COPY --from=builder /dist/main /
-
+COPY docker-compose-template.yml .
 RUN mkdir /tmp/spinuplocal
 
 COPY app.rsa /tmp/spinuplocal
