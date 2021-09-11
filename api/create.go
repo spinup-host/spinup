@@ -97,7 +97,8 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
-	userId, err := validateToken(*req)
+	authHeader := req.Header.Get("Authorization")
+	userId, err := validateToken(authHeader)
 	if err != nil {
 		log.Printf("error validating token %v", err)
 		http.Error(w, "error validating token", 500)
@@ -264,10 +265,12 @@ func lastContainerID() (string, error) {
 	return string(output), nil
 }
 
-func validateToken(r http.Request) (string, error) {
-	reqToken := r.Header.Get("Authorization")
-	splitToken := strings.Split(reqToken, "Bearer ")
-	reqToken = splitToken[1]
+func validateToken(authHeader string) (string, error) {
+	splitToken := strings.Split(authHeader, "Bearer ")
+	if len(splitToken) < 2 {
+		return "", fmt.Errorf("cannot validate empty token")
+	}
+	reqToken := splitToken[1]
 	userID, err := JWTToString(reqToken)
 	if err != nil {
 		return "", err
