@@ -5,7 +5,7 @@ An open source alternative to [AWS RDS](https://aws.amazon.com/rds/), [Cloud SQL
 ## Arhictecture
 
 The idea is simple. Spinup creates multiple containers through docker-compose. 
-Spinup can be deployed anywhere. Only requirement is docker-compose. It can run on anywhere [Digital Ocean droplet](https://www.digitalocean.com/products/droplets/), [Azure Compute](https://azure.microsoft.com/en-us/product-categories/compute/), [Oracle Compute](https://www.oracle.com/cloud/compute/), [Raspberry Pi](https://www.raspberrypi.org/) etc. 
+Spinup can be deployed anywhere. System requirements are Go and docker-compose. Once this [issue](https://github.com/spinup-host/spinup/issues/45) has been fixed then you don't need to have Go installed. It can run on [Digital Ocean droplet](https://www.digitalocean.com/products/droplets/), [Azure Compute](https://azure.microsoft.com/en-us/product-categories/compute/), [Oracle Compute](https://www.oracle.com/cloud/compute/), [Raspberry Pi](https://www.raspberrypi.org/) etc. 
 
 We are currently using Github Authentication. We should be able to support other authentication methods.
 
@@ -14,25 +14,12 @@ Currently we only support Postgres dbms, but we should be able to support other 
 ![architecture](architecture.jpeg)
 ### How to run
 
-It requires a bunch of environment variables. You can export them and run using. Also change the port to a higher number if you don't run the program as `root` user.
-
-```
-export SPINUP_PROJECT_DIR=/tmp/spinuplocal && export ARCHITECTURE=amd64 && export CF_AUTHORIZATION_TOKEN=replaceme  && export CF_ZONE_ID=replaceme && export CLIENT_ID=replaceme && export CLIENT_SECRET=replaceme && go run main.go
-```
-
-* SPINUP_PROJECT_DIR - The project directory which stores config and data files.
-* ARCHITECTURE - What architecture that your system is.
-valid values: arm32v7, amd64
-* CF_AUTHORIZATION_TOKEN - Cloudflare authorization token for manipulating DNS records
-* CF_ZONE_ID - Cloudflare zone id
-* CLIENT_ID - Github client id
-* CLIENT_SECRET - Github client secret
-
-You need to have a private and public key that you can create using OpenSSL:
+#### Requirement for JWT
+We use JWT for verification. You need to have a private and public key that you can create using OpenSSL:
 
 **To create a private key**
 ```
-visi@visis-MacBook-Pro spinup % openssl genrsa -out /tmp/spinuplocal/app.rsa 4096 
+visi@visis-MacBook-Pro spinup % openssl genrsa -out /${SPINUP_PROJECT_DIR}/app.rsa 4096 
 Generating RSA private key, 4096 bit long modulus
 ...++
 ...................++
@@ -41,13 +28,27 @@ e is 65537 (0x10001)
 
 **To create a public key**
 ```
-visi@visis-MacBook-Pro spinup % openssl rsa -in /tmp/spinuplocal/app.rsa -pubout > /tmp/spinuplocal/app.rsa.pub
+visi@visis-MacBook-Pro spinup % openssl rsa -in /${SPINUP_PROJECT_DIR}/app.rsa -pubout > /${SPINUP_PROJECT_DIR}/app.rsa.pub
 writing RSA key
 ```
 
-On another terminal create a POST request using
+It requires a bunch of environment variables. You can export them and run using.
+
 ```
-curl -X POST http://localhost:8000/createservice \
+export SPINUP_PROJECT_DIR=${SPINUP_PROJECT_DIR} && export ARCHITECTURE=${ARCHITECTRE} && export CLIENT_ID=${CLIENT_ID} && export CLIENT_SECRET=${CLIENT_SECRET} && go run main.go
+```
+
+* SPINUP_PROJECT_DIR - The project directory which stores config and data files.
+* ARCHITECTURE - What architecture that your system is.
+    valid values: arm32v7, amd64
+* CLIENT_ID - Github client id
+* CLIENT_SECRET - Github client secret
+
+On another terminal you can start the [dash](https://github.com/spinup-host/spinup-dash) to access the backend.
+
+To check the API endpoint:
+```
+curl -X POST http://localhost:4434/createservice \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer reaplaceyourtokenhere" \
     --data '{
@@ -60,6 +61,20 @@ curl -X POST http://localhost:8000/createservice \
         }'
 ```
 
+Once you created a cluster, you can connect using psql or any other postgres client
+
+```
+visi@visis-MacBook-Pro ~ % psql -h localhost -U postgres -p <port>
+Password for user postgres:
+psql (9.6.18, server 13.3 (Debian 13.3-1.pgdg100+1))
+WARNING: psql major version 9.6, server major version 13.
+         Some psql features might not work.
+Type "help" for help.
+
+postgres=# \dt
+```
+
+# API Documentation
 ## Endpoints
 
 ### Github Auth
