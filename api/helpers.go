@@ -1,6 +1,7 @@
 package api
 
 import (
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,12 @@ import (
 
 	"github.com/golang/gddo/httputil/header"
 )
+
+//TODO: vicky find how to keep the templates/* outside of the api. ie need to figure how to do relative path.
+// check: https://stackoverflow.com/questions/66285635/how-do-you-use-go-1-16-embed-features-in-subfolders-packages
+
+//go:embed templates/*
+var dockerTempl embed.FS
 
 type malformedRequest struct {
 	status int
@@ -104,7 +111,7 @@ func createDockerComposeFile(absolutepath string, s service) error {
 	}
 
 	defer f.Close() // don't forget to close the file when finished.
-	templ, err := template.ParseFiles("docker-compose-template.yml")
+	templ, err := template.ParseFS(dockerTempl, "docker-compose-template.yml")
 	if err != nil {
 		return fmt.Errorf("ERROR: parsing template file %v", err)
 	}

@@ -1,6 +1,6 @@
 module github.com/spinup-host
 
-go 1.14
+go 1.16
 
 require (
 	github.com/cloudflare/cloudflare-go v0.14.0
