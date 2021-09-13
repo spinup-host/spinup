@@ -2,3 +2,4 @@
 Makefile
 *.service
 app.rsa
+spinup-host
