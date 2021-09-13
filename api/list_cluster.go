@@ -16,7 +16,8 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
-	userId, err := validateToken(*req)
+	authHeader := req.Header.Get("Authorization")
+	userId, err := validateToken(authHeader)
 	log.Println("listcluster")
 	if err != nil {
 		log.Printf("error validating token %v", err)
