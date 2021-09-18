@@ -1,7 +1,6 @@
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [created]
   
 name: "pre-release"
 jobs:
@@ -24,6 +23,4 @@ jobs:
         goarch: ${{ matrix.goarch }}
         goversion: "https://dl.google.com/go/go1.16.5.linux-amd64.tar.gz"
         binary_name: "spinup-backend"
-        extra_files: README.md
-        overwrite: true
-        release_tag: latest
+        extra_files: README.md CONTRIBUTING.md
