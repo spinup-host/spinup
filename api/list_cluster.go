@@ -9,22 +9,25 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/spinup-host/config"
 )
 
 func ListCluster(w http.ResponseWriter, req *http.Request) {
+	log.Println("listcluster")
 	if (*req).Method != "GET" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
 	authHeader := req.Header.Get("Authorization")
-	userId, err := validateToken(authHeader)
-	log.Println("listcluster")
+	var err error
+	config.Cfg.UserID, err = config.ValidateToken(authHeader)
 	if err != nil {
 		log.Printf("error validating token %v", err)
 		http.Error(w, "error validating token", 500)
 	}
-	dbPath := projectDir + "/" + userId
-	clusterInfos := ReadClusterInfo(dbPath, userId)
+	dbPath := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID
+	clusterInfos := ReadClusterInfo(dbPath, config.Cfg.UserID)
 	clusterByte, err := json.Marshal(clusterInfos)
 	if err != nil {
 		log.Printf("ERROR: marshalling clusterInfos %v", err)

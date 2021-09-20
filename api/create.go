@@ -2,8 +2,6 @@ package api
 
 import (
 	"bytes"
-	"context"
-	"crypto/rsa"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -16,51 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudflare/cloudflare-go"
-	"github.com/golang-jwt/jwt"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/spinup-host/config"
+	"github.com/spinup-host/misc"
 )
-
-var authToken, zoneID, projectDir, architecture string
-var api *cloudflare.API
-var privKeyPath, pubKeyPath string
-var (
-	verifyKey *rsa.PublicKey
-	signKey   *rsa.PrivateKey
-)
-
-func init() {
-	var ok bool
-	var err error
-	if projectDir, ok = os.LookupEnv("SPINUP_PROJECT_DIR"); !ok {
-		log.Fatalf("FATAL: getting environment variable SPINUP_PROJECT_DIR")
-	}
-	if architecture, ok = os.LookupEnv("ARCHITECTURE"); !ok {
-		log.Fatalf("FATAL: getting environment variable ARCHITECTURE")
-	}
-	if authToken, ok = os.LookupEnv("CF_AUTHORIZATION_TOKEN"); !ok {
-		log.Fatalf("FATAL: getting environment variable CF_AUTHORIZATION_TOKEN")
-	}
-	if zoneID, ok = os.LookupEnv("CF_ZONE_ID"); !ok {
-		log.Fatalf("FATAL: getting environment variable CF_ZONE_ID")
-	}
-	api, err = cloudflare.NewWithAPIToken(authToken)
-	if err != nil {
-		log.Fatalf("FATAL: creating new cloudflare client %v", err)
-	}
-
-	signBytes, err := ioutil.ReadFile(projectDir + "/app.rsa")
-	fatal(err)
-
-	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes)
-	fatal(err)
-	verifyBytes, err := ioutil.ReadFile(projectDir + "/app.rsa.pub")
-	fatal(err)
-
-	verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
-	fatal(err)
-	log.Println("INFO: initial validations successful")
-}
 
 type service struct {
 	Duration time.Duration
@@ -98,7 +55,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	authHeader := req.Header.Get("Authorization")
-	userId, err := validateToken(authHeader)
+	userId, err := config.ValidateToken(authHeader)
 	if err != nil {
 		log.Printf("error validating token %v", err)
 		http.Error(w, "error validating token", 500)
@@ -123,8 +80,8 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	s.Db.Port, err = portcheck()
-	s.Architecture = architecture
-	servicePath := projectDir + "/" + s.UserID + "/" + s.Db.Name
+	s.Architecture = config.Cfg.Common.Architecture
+	servicePath := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.Db.Name
 	if err = prepareService(s, servicePath); err != nil {
 		log.Printf("ERROR: preparing service for %s %v", s.UserID, err)
 		http.Error(w, "Error preparing service", 500)
@@ -136,18 +93,6 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	log.Printf("INFO: created service for user %s", s.UserID)
-	/* err = connectService(s)
-	if err != nil {
-		log.Printf("ERROR: connecting service for %s %v", s.UserID, err)
-		http.Error(w, "Error connecting service", 500)
-		return
-	}
-	err = internal.UpdateTunnelClientYml(s.Db.Name, s.Db.Port)
-	if err != nil {
-		log.Printf("ERROR: updating tunnel client for %s %v", s.UserID, err)
-		http.Error(w, "Error updating tunnel client", 500)
-		return
-	} */
 	containerID, err := lastContainerID()
 	if err != nil {
 		log.Printf("ERROR: getting container id %v", err)
@@ -166,7 +111,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
-	updateSqliteDB(projectDir+"/"+s.UserID, s.UserID, s)
+	updateSqliteDB(config.Cfg.Common.ProjectDir+"/"+s.UserID, s.UserID, s)
 	w.Write(jsonBody)
 }
 
@@ -225,22 +170,9 @@ func ValidateSystemRequirements() error {
 	return nil
 }
 
-func connectService(s service) error {
-	_, err := api.CreateDNSRecord(context.Background(), zoneID, cloudflare.DNSRecord{
-		Type:    "A",
-		Name:    s.UserID + "-" + s.Db.Name,
-		Content: "34.203.202.32",
-	})
-	if err != nil {
-		return err
-	}
-	log.Printf("INFO: DNS record created for %s ", s.UserID+"-"+s.Db.Name)
-	return nil
-}
-
 func portcheck() (int, error) {
-	endingPort := 5440
-	for startingPort := 5432; startingPort < endingPort; startingPort++ {
+	min, endingPort := misc.MinMax(config.Cfg.Common.Ports)
+	for startingPort := min; startingPort < endingPort; startingPort++ {
 		target := fmt.Sprintf("%s:%d", "localhost", startingPort)
 		_, err := net.DialTimeout("tcp", target, 3*time.Second)
 		if err != nil && !strings.Contains(err.Error(), "connect: connection refused") {
@@ -263,19 +195,6 @@ func lastContainerID() (string, error) {
 		return "", err
 	}
 	return string(output), nil
-}
-
-func validateToken(authHeader string) (string, error) {
-	splitToken := strings.Split(authHeader, "Bearer ")
-	if len(splitToken) < 2 {
-		return "", fmt.Errorf("cannot validate empty token")
-	}
-	reqToken := splitToken[1]
-	userID, err := JWTToString(reqToken)
-	if err != nil {
-		return "", err
-	}
-	return userID, nil
 }
 
 func updateSqliteDB(path string, dbName string, data service) {

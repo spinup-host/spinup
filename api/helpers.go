@@ -111,7 +111,7 @@ func createDockerComposeFile(absolutepath string, s service) error {
 	}
 
 	defer f.Close() // don't forget to close the file when finished.
-	templ, err := template.ParseFS(dockerTempl, "docker-compose-template.yml")
+	templ, err := template.ParseFS(dockerTempl, "templates/docker-compose-template.yml")
 	if err != nil {
 		return fmt.Errorf("ERROR: parsing template file %v", err)
 	}

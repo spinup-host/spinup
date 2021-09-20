@@ -1,27 +1,14 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/spinup-host/config"
 )
-
-func fatal(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// Create a struct that will be encoded to a JWT.
-// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
-type claims struct {
-	Text string `json:"text"`
-	jwt.StandardClaims
-}
 
 func stringToJWT(text string) (string, error) {
 	// Declare the expiration time of the token
@@ -29,7 +16,7 @@ func stringToJWT(text string) (string, error) {
 	log.Println("string to JWTify:", text)
 	expirationTime := time.Now().Add(48 * time.Hour)
 	// Create the JWT claims, which includes the text and expiry time
-	claims := &claims{
+	claims := &config.Claims{
 		Text: text,
 		StandardClaims: jwt.StandardClaims{
 			// In JWT, the expiry time is expressed as unix milliseconds
@@ -39,28 +26,11 @@ func stringToJWT(text string) (string, error) {
 	// Declare the token with the algorithm used for signing, and the claims
 	token := jwt.NewWithClaims(jwt.SigningMethodPS512, claims)
 	// Create the JWT string
-	jwt, err := token.SignedString(signKey)
+	jwt, err := token.SignedString(config.Cfg.SignKey)
 	if err != nil {
 		return "", err
 	}
 	return jwt, nil
-}
-
-func JWTToString(tokenString string) (string, error) {
-	keyFunc := func(t *jwt.Token) (interface{}, error) {
-		return verifyKey, nil
-	}
-	claims := &claims{}
-	log.Println("JWT to string:", tokenString)
-	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
-	if err != nil {
-		return "", err
-	}
-	if !token.Valid {
-		return "", errors.New("invalid token")
-	}
-	log.Println("claims:", claims.Text)
-	return claims.Text, nil
 }
 
 // TODO: vicky to remove this handler after the testing
@@ -80,7 +50,7 @@ func JWT(w http.ResponseWriter, r *http.Request) {
 
 func JWTDecode(w http.ResponseWriter, r *http.Request) {
 	jwttoken := r.Header.Get("jwttoken")
-	text, err := JWTToString(jwttoken)
+	text, err := config.JWTToString(jwttoken)
 	if err != nil {
 		log.Printf("error jwtdecode %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
