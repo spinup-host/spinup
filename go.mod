@@ -14,6 +14,7 @@ require (
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.11.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.8.0
 	github.com/rs/zerolog v1.25.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b

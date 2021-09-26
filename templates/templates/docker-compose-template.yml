@@ -11,6 +11,5 @@ services:
       POSTGRES_PASSWORD: {{ .PostgresPassword }}
     volumes:
       - data-volume-{{ .UserID }}:/var/lib/postgresql/data
-
 volumes:
   data-volume-{{ .UserID }}:

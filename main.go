@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -48,6 +49,7 @@ func main() {
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	mux.HandleFunc("/listcluster", api.ListCluster)
 	mux.HandleFunc("/metrics", metrics.HandleMetrics)
+	mux.HandleFunc("/createbackup", api.CreateBackup)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},
 		AllowedHeaders: []string{"authorization", "content-type"},
@@ -57,6 +59,9 @@ func main() {
 		log.Fatalf("FATAL: starting server %v", err)
 	}
 }
+
+//go:embed templates/*
+var DockerTempl embed.FS
 
 func fatal(err error) {
 	if err != nil {

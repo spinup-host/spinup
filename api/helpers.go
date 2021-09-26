@@ -1,7 +1,6 @@
 package api
 
 import (
-	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,13 +13,11 @@ import (
 	"text/template"
 
 	"github.com/golang/gddo/httputil/header"
+	"github.com/spinup-host/templates"
 )
 
 //TODO: vicky find how to keep the templates/* outside of the api. ie need to figure how to do relative path.
 // check: https://stackoverflow.com/questions/66285635/how-do-you-use-go-1-16-embed-features-in-subfolders-packages
-
-//go:embed templates/*
-var dockerTempl embed.FS
 
 type malformedRequest struct {
 	status int
@@ -102,7 +99,7 @@ func randSeq(n int) string {
 }
 
 // TODO: To remove the duplication here. We don't need separate function for each file
-func createDockerComposeFile(absolutepath string, s service) error {
+func CreateDockerComposeFile(absolutepath string, s service) error {
 	outputPath := filepath.Join(absolutepath, "docker-compose.yml")
 	// Create the file:
 	f, err := os.Create(outputPath)
@@ -111,7 +108,7 @@ func createDockerComposeFile(absolutepath string, s service) error {
 	}
 
 	defer f.Close() // don't forget to close the file when finished.
-	templ, err := template.ParseFS(dockerTempl, "templates/docker-compose-template.yml")
+	templ, err := template.ParseFS(templates.DockerTempl, "templates/docker-compose-template.yml")
 	if err != nil {
 		return fmt.Errorf("ERROR: parsing template file %v", err)
 	}
