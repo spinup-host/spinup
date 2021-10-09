@@ -112,40 +112,46 @@ postgres=# \dt
         Content: `{ error : "You are unauthorized to make this request." }`
 
 ### Create Service
+`/createservice` - Creates a new database service. Only Postgres databases are supported at the moment
+#### Authentication Header
+`Bearer <GITHUB_TOKEN>`
 
-- URL
-
-/createservice
-
-- Method:
+#### Method:
 
 `POST`
 
-- Data Params
-
-```
+#### Data Params
+- `userId=[String]`: GitHub username of the user.
+- `version=[Object]`: Preferred database version. It must have the following properties:
+    - `maj=[Integer]`: Database major version. E.g for Postgres:9.6, the value here is 9.
+    - `min=[Integer]`: Database major version. E.g for Postgres:9.6, the value here is 6.
+- `db=[Object]`: A JSON object describing the properties of the database to be created. The properties are:
+  - `type=[String]`: Type of the database service to be created. Only `postgres` is supported for now.
+  - `name=[String]`: Name of the database service
+  - `monitoring=[String]`: Optional. Must be either of `enable` or `disable` when present. When enabled, it turns on prometheus metrics for the database
+    on port 9187.
+```json
 {
-    "code": "githubcode"
-    "name": "postgres",
-    "duration": 200,
-    "resource":
-        {
-            "memory": "32MB",
-            "storage": 200,
-            "version": 
-                {"maj":9,"min":6}
-        },
-    "userid": "replaceme"
+  "userId": "viggy28",
+  "db": {
+    "type": "postgres",
+    "name": "localtest",
+    "monitoring": "enable"
+  },
+  "version": {
+    "maj": 9,
+    "min": 6
+  }
 }
 ```
 
-- Success Response:
-    - Code: 200
+#### Success Response:
+    Code: 200
 
-- Error Response:
+#### Error Response:
+    Code: 500 INTERNALSERVER ERROR
 
-    - Code: 500 INTERNALSERVER ERROR
-
+### JWT
 - URL
 
 /jwt?data=replaceme
