@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/docker/docker/client"
+	"github.com/spinup-host/internal"
 	"io/ioutil"
 	"log"
 	"net"
@@ -26,6 +28,7 @@ type service struct {
 	Architecture string
 	//Port         uint
 	Db dbCluster
+	DockerNetwork string
 }
 
 type dbCluster struct {
@@ -39,6 +42,7 @@ type dbCluster struct {
 	MinVersion uint
 	Memory     string
 	Storage    string
+	Monitoring string
 }
 
 type serviceResponse struct {
@@ -84,18 +88,19 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	s.Db.Port, err = portcheck()
 	s.Architecture = config.Cfg.Common.Architecture
 	servicePath := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.Db.Name
+	s.DockerNetwork = fmt.Sprintf("%s_default", s.Db.Name) // following docker-compose naming format for compatibility
 	if err = prepareService(s, servicePath); err != nil {
 		log.Printf("ERROR: preparing service for %s %v", s.UserID, err)
 		http.Error(w, "Error preparing service", 500)
 		return
 	}
-	if err = startService(s, servicePath); err != nil {
+	var containerID string
+	if containerID, err = startService(s, servicePath); err != nil {
 		log.Printf("ERROR: starting service for %s %v", s.UserID, err)
 		http.Error(w, "Error starting service", 500)
 		return
 	}
 	log.Printf("INFO: created service for user %s", s.UserID)
-	containerID, err := lastContainerID()
 	if err != nil {
 		log.Printf("ERROR: getting container id %v", err)
 		http.Error(w, "Error getting container id", 500)
@@ -129,14 +134,14 @@ func prepareService(s service, path string) error {
 	return nil
 }
 
-func startService(s service, path string) error {
-	err := ValidateSystemRequirements()
+func startService(s service, path string) (serviceContainerID string, err error) {
+	err = ValidateSystemRequirements()
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = ValidateDockerCompose(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	cmd := exec.Command("docker-compose", "-f", path+"/docker-compose.yml", "up", "-d")
 	// https://stackoverflow.com/questions/18159704/how-to-debug-exit-status-1-error-when-running-exec-command-in-golang/18159705
@@ -148,9 +153,24 @@ func startService(s service, path string) error {
 	err = cmd.Run()
 	if err != nil {
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
-		return err
+		return "", err
 	}
-	return nil
+	serviceContainerID, err = lastContainerID()
+
+	if s.Db.Monitoring == "enable" {
+		cli, err := client.NewClientWithOpts(client.FromEnv)
+		if err != nil {
+			fmt.Println(err)
+			return serviceContainerID, err
+		}
+
+		pgExporter := internal.NewPgExporterService(cli, s.DockerNetwork, "postgres", "replaceme")
+		if err := pgExporter.Start(); err != nil {
+			fmt.Println(err)
+			return serviceContainerID, err
+		}
+	}
+	return serviceContainerID, nil
 }
 
 func ValidateDockerCompose(path string) error {
