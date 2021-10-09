@@ -118,17 +118,19 @@ func createDockerComposeFile(absolutepath string, s service) error {
 	// TODO: not sure is there a better way to pass data to template
 	// A lot of this data is redundant. Already available in Service struct
 	data := struct {
-		UserID       string
-		Architecture string
-		Type         string
-		Port         int
-		Secret       string
+		UserID           string
+		Architecture     string
+		Type             string
+		Port             int
+		PostgresUsername string
+		PostgresPassword string
 	}{
 		s.UserID,
 		s.Architecture,
 		s.Db.Type,
 		s.Db.Port,
-		"replaceme",
+		s.Db.Username,
+		s.Db.Password,
 	}
 	err = templ.Execute(f, data)
 	if err != nil {
