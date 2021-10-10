@@ -7,7 +7,8 @@ services:
     ports:
       - "{{ .Port }}:5432"
     environment:
-      POSTGRES_PASSWORD: {{ .Secret }}
+      POSTGRES_USER: {{ .PostgresUsername }}
+      POSTGRES_PASSWORD: {{ .PostgresPassword }}
     volumes:
       - data-volume-{{ .UserID }}:/var/lib/postgresql/data
 

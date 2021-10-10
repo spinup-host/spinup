@@ -33,6 +33,8 @@ type dbCluster struct {
 	ID         string
 	Type       string
 	Port       int
+	Username   string
+	Password   string
 	MajVersion uint
 	MinVersion uint
 	Memory     string
@@ -112,6 +114,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	updateSqliteDB(config.Cfg.Common.ProjectDir+"/"+s.UserID, s.UserID, s)
+	w.Header().Set("Content-type", "application/json")
 	w.Write(jsonBody)
 }
 
@@ -204,7 +207,7 @@ func updateSqliteDB(path string, dbName string, data service) {
 	}
 	defer db.Close()
 	sqlStmt := `
-	create table if not exists clusterInfo (id integer not null primary key autoincrement, clusterId text, Name text, Port integer);
+	create table if not exists clusterInfo (id integer not null primary key autoincrement, clusterId text, name text, username text, password text, port integer);
 	`
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
@@ -212,16 +215,17 @@ func updateSqliteDB(path string, dbName string, data service) {
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
-	stmt, err := tx.Prepare("insert into clusterInfo(clusterId, name, port) values(?, ?, ?)")
+	stmt, err := tx.Prepare("insert into clusterInfo(clusterId, name, username, password, port) values(?, ?, ?, ?, ?)")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(data.Db.ID, data.Db.Name, data.Db.Port)
+	_, err = stmt.Exec(data.Db.ID, data.Db.Name, data.Db.Username, data.Db.Password, data.Db.Port)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+	} else {
+		tx.Commit()
 	}
-	tx.Commit()
 }
