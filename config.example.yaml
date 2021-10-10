@@ -3,5 +3,4 @@ common:
     5432, 5433, 5434, 5435, 5436, 5437
   ]
   architecture: amd64
-  projectDir: /home/michael/lab/org/spinup/spinup
-
+  projectDir: <PROJECT_DIR>
