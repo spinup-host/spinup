@@ -27,7 +27,7 @@ type service struct {
 	// one of arm64v8 or arm32v7 or amd64
 	Architecture string
 	//Port         uint
-	Db dbCluster
+	Db            dbCluster
 	DockerNetwork string
 }
 
@@ -156,17 +156,18 @@ func startService(s service, path string) (serviceContainerID string, err error)
 		return "", err
 	}
 	serviceContainerID, err = lastContainerID()
+	if err != nil {
+		return serviceContainerID, err
+	}
 
 	if s.Db.Monitoring == "enable" {
 		cli, err := client.NewClientWithOpts(client.FromEnv)
 		if err != nil {
-			fmt.Println(err)
 			return serviceContainerID, err
 		}
 
-		pgExporter := internal.NewPgExporterService(cli, s.DockerNetwork, "postgres", "replaceme")
+		pgExporter := internal.NewPgExporterService(cli, s.DockerNetwork, s.Db.Username, s.Db.Password)
 		if err := pgExporter.Start(); err != nil {
-			fmt.Println(err)
 			return serviceContainerID, err
 		}
 	}

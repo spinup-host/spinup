@@ -6,7 +6,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/rs/zerolog"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,16 +16,15 @@ type LinePrefixLogger struct {
 	logger zerolog.Logger
 }
 
-type DockerService struct
-{
-	DockerClient *client.Client
-	Name string `yaml:"name"`
-	NetworkName   string      `yaml:"network_name"`
-	RestartPolicy string      `yaml:"restart"`
-	Ports         map[int]int `yaml:"ports"`
-	Environment map[string]string `yaml:"environment"`
-	Volumes []string `yaml:"volumes"`
-	Image string `yaml:"image"`
+type DockerService struct {
+	DockerClient  *client.Client
+	Name          string            `yaml:"name"`
+	NetworkName   string            `yaml:"network_name"`
+	RestartPolicy string            `yaml:"restart"`
+	Ports         map[int]int       `yaml:"ports"`
+	Environment   map[string]string `yaml:"environment"`
+	Volumes       []string          `yaml:"volumes"`
+	Image         string            `yaml:"image"`
 }
 
 func (ds DockerService) buildArgs() []string {
@@ -65,7 +63,6 @@ func (ds DockerService) Start() (err error) {
 	cmd.Stderr = logger
 
 	if err = cmd.Start(); err != nil {
-		log.Print(err)
 		return err
 	}
 	return nil
@@ -73,18 +70,18 @@ func (ds DockerService) Start() (err error) {
 
 func NewPgExporterService(cli *client.Client, networkName, postgresUsername, postgresPassword string) DockerService {
 	exporterSvc := DockerService{
-		DockerClient: cli,
+		DockerClient:  cli,
 		Name:          "postgres_exporter",
 		NetworkName:   networkName,
 		RestartPolicy: "unless-stopped",
-		Ports: map[int]int {
+		Ports: map[int]int{
 			9187: 9187,
 		},
-		Environment: map[string]string {
+		Environment: map[string]string{
 			"DATA_SOURCE_NAME": fmt.Sprintf("postgresql://%s:%s@%s:5432/postgres?sslmode=disable",
 				postgresUsername,
 				postgresPassword,
-				networkName + "_postgres_1",
+				networkName+"_postgres_1",
 			),
 		},
 		Image: "quay.io/prometheuscommunity/postgres-exporter",
