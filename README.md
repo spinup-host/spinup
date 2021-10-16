@@ -2,7 +2,7 @@
 
 An open source alternative to [AWS RDS](https://aws.amazon.com/rds/), [Cloud SQL](https://cloud.google.com/sql). 
 
-## Arhictecture
+## Architecture
 
 The idea is simple. Spinup creates multiple containers through docker-compose. 
 Spinup can be deployed anywhere. System requirements are Go and docker-compose. Once this [issue](https://github.com/spinup-host/spinup/issues/45) has been fixed then you don't need to have Go installed. It can run on [Digital Ocean droplet](https://www.digitalocean.com/products/droplets/), [Azure Compute](https://azure.microsoft.com/en-us/product-categories/compute/), [Oracle Compute](https://www.oracle.com/cloud/compute/), [Raspberry Pi](https://www.raspberrypi.org/) etc. 
@@ -55,7 +55,9 @@ curl -X POST http://localhost:4434/createservice \
         "userId": "viggy28",
         "db": {
             "type": "postgres",
-            "name": "localtest"
+            "name": "localtest",
+            "username": "spinup",
+            "password": "spinup"
             },
         "version": {"maj":9,"min":6}
         }'
