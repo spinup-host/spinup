@@ -3,12 +3,13 @@ package internal
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/rs/zerolog"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/rs/zerolog"
 )
 
 type LinePrefixLogger struct {
@@ -68,7 +69,7 @@ func (ds DockerService) Start() (err error) {
 	return nil
 }
 
-func NewPgExporterService(cli *client.Client, networkName, postgresUsername, postgresPassword string) DockerService {
+func NewPgExporterService(cli *client.Client, networkName, dbName, postgresUsername, postgresPassword string) DockerService {
 	exporterSvc := DockerService{
 		DockerClient:  cli,
 		Name:          "postgres_exporter",
@@ -81,7 +82,7 @@ func NewPgExporterService(cli *client.Client, networkName, postgresUsername, pos
 			"DATA_SOURCE_NAME": fmt.Sprintf("postgresql://%s:%s@%s:5432/postgres?sslmode=disable",
 				postgresUsername,
 				postgresPassword,
-				networkName+"_postgres_1",
+				dbName+"_postgres_1",
 			),
 		},
 		Image: "quay.io/prometheuscommunity/postgres-exporter",
