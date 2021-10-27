@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/client"
-	"github.com/spinup-host/internal"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,6 +13,9 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/client"
+	"github.com/spinup-host/internal"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spinup-host/config"
@@ -166,7 +167,7 @@ func startService(s service, path string) (serviceContainerID string, err error)
 			return serviceContainerID, err
 		}
 
-		pgExporter := internal.NewPgExporterService(cli, s.DockerNetwork, s.Db.Username, s.Db.Password)
+		pgExporter := internal.NewPgExporterService(cli, s.DockerNetwork, s.Db.Name, s.Db.Username, s.Db.Password)
 		if err := pgExporter.Start(); err != nil {
 			return serviceContainerID, err
 		}

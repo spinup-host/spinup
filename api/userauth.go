@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
+
+	"github.com/spinup-host/config"
 )
 
 type user struct {
@@ -45,14 +46,10 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("ua", ua)
-	clientID, ok := os.LookupEnv("CLIENT_ID")
-	if !ok {
-		log.Fatalf("FATAL: getting environment variable CLIENT_ID")
-	}
-	clientSecret, ok := os.LookupEnv("CLIENT_SECRET")
-	if !ok {
-		log.Fatalf("FATAL: getting environment variable CLIENT_SECRET")
-	}
+	clientID := config.Cfg.Common.ClientID
+
+	clientSecret := config.Cfg.Common.ClientSecret
+
 	log.Println("req::", r.Body)
 	requestBodyMap := map[string]string{"client_id": clientID, "client_secret": clientSecret, "code": ua.Code}
 	requestBodyJSON, err := json.Marshal(requestBodyMap)

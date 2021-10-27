@@ -31,18 +31,21 @@ e is 65537 (0x10001)
 visi@visis-MacBook-Pro spinup % openssl rsa -in /${SPINUP_PROJECT_DIR}/app.rsa -pubout > /${SPINUP_PROJECT_DIR}/app.rsa.pub
 writing RSA key
 ```
-
-It requires a bunch of environment variables. You can export them and run using.
+**Create a config.yaml file**
 
 ```
-export SPINUP_PROJECT_DIR=${SPINUP_PROJECT_DIR} && export ARCHITECTURE=${ARCHITECTRE} && export CLIENT_ID=${CLIENT_ID} && export CLIENT_SECRET=${CLIENT_SECRET} && go run main.go
-```
-
-* SPINUP_PROJECT_DIR - The project directory which stores config and data files.
-* ARCHITECTURE - What architecture that your system is.
-    valid values: arm32v7, amd64
-* CLIENT_ID - Github client id
-* CLIENT_SECRET - Github client secret
+common:
+  ports: [
+    5432, 5433, 5434, 5435, 5436, 5437
+  ]
+  architecture: amd64
+  projectDir: <PROJECT_DIR>
+  client_id: <CLIENT_ID>
+  client_secret: <CLIENT_SECRET>
+ ```
+ **To run spinup**
+ 
+ ```go run main.go```
 
 On another terminal you can start the [dash](https://github.com/spinup-host/spinup-dash) to access the backend.
 
