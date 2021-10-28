@@ -15,6 +15,8 @@ type Configuration struct {
 		Architecture string `yaml:"architecture"`
 		ProjectDir   string `yaml:"projectDir"`
 		Ports        []int  `yaml:"ports"`
+		ClientID     string `yaml:"client_id"`
+		ClientSecret string `yaml:"client_secret"`
 	} `yaml:"common"`
 	VerifyKey *rsa.PublicKey
 	SignKey   *rsa.PrivateKey

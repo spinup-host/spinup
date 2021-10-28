@@ -4,3 +4,5 @@ common:
   ]
   architecture: amd64
   projectDir: <PROJECT_DIR>
+  client_id: <CLIENT_ID>
+  client_secret: <CLIENT_SECRET>
