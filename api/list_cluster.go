@@ -137,7 +137,7 @@ func getClusterFromDb(clusterId string) (clusterInfo, error) {
 	}
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
-		log.Fatal(err)
+		return ci, err
 	}
 	defer db.Close()
 
