@@ -219,7 +219,7 @@ func lastContainerID() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(output), nil
+	return strings.TrimSuffix(string(output), "\n"), nil
 }
 
 func updateSqliteDB(path string, dbName string, data service) {
