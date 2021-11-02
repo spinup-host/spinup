@@ -47,6 +47,7 @@ func main() {
 	mux.HandleFunc("/jwtdecode", api.JWTDecode)
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	mux.HandleFunc("/listcluster", api.ListCluster)
+	mux.HandleFunc("/cluster", api.GetCluster)
 	mux.HandleFunc("/metrics", metrics.HandleMetrics)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},
