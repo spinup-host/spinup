@@ -156,6 +156,34 @@ postgres=# \dt
 #### Error Response:
     Code: 500 INTERNALSERVER ERROR
 
+### Get service
+`/cluster?cluster_id=<CLUSTER_ID>` - Fetches specific details of a service or cluster
+#### Method:
+`GET`
+#### Authentication Header
+`Bearer <GITHUB_TOKEN>`
+#### Path Parameters
+- `cluster_id=[String]`: ID of the cluster to be retrieved.
+#### Responses
+200:
+```json
+{
+    "data": {
+        "cluster_id": "a130e42a09f4\n",
+        "id": 2,
+        "name": "localtest",
+        "port": 5432,
+        "username": "localtest"
+    }
+}
+```
+404:
+```json
+{
+    "message": "no cluster found with matching id"
+}
+```
+
 ### JWT
 - URL
 
