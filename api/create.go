@@ -215,7 +215,7 @@ func startService(s service, path string) (serviceContainerID string, err error)
 			return serviceContainerID, err
 		}
 
-		pgExporter := internal.NewPgExporterService(cli, s.DockerNetwork, s.Db.Username, s.Db.Password)
+		pgExporter := internal.NewPgExporterService(cli, s.DockerNetwork, s.Db.Name, s.Db.Username, s.Db.Password)
 		if err := pgExporter.Start(); err != nil {
 			return serviceContainerID, err
 		}
@@ -267,7 +267,7 @@ func lastContainerID() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(output), nil
+	return strings.TrimSuffix(string(output), "\n"), nil
 }
 
 func OpenSqliteDB(path string) (*sql.DB, error) {

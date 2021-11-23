@@ -38,9 +38,11 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 }
 
 type clusterInfo struct {
-	ClusterID string
-	Name      string
-	Port      int
+	ID        int    `json:"id"`
+	ClusterID string `json:"cluster_id"`
+	Name      string `json:"name"`
+	Port      int    `json:"port"`
+	Username  string `json:"username"`
 }
 
 func ReadClusterInfo(path, dbName string) []clusterInfo {
@@ -71,4 +73,81 @@ func ReadClusterInfo(path, dbName string) []clusterInfo {
 	}
 	fmt.Println(clusterIds)
 	return clusterInfos
+}
+
+func GetCluster(w http.ResponseWriter, r *http.Request) {
+	if (*r).Method != "GET" {
+		respond(http.StatusMethodNotAllowed, w, map[string]interface{}{
+			"message": "method not allowed",
+		})
+		return
+	}
+	// todo (idoqo): move auth stuff to a "middleware"
+	authHeader := r.Header.Get("Authorization")
+	var err error
+	config.Cfg.UserID, err = config.ValidateToken(authHeader)
+	if err != nil {
+		log.Printf("error validating token %v", err)
+		respond(http.StatusInternalServerError, w, map[string]interface{}{
+			"message": "could not validate token",
+		})
+		return
+	}
+
+	clusterId := r.URL.Query().Get("cluster_id")
+	if clusterId == "" {
+		respond(http.StatusBadRequest, w, map[string]interface{}{
+			"message": "cluster_id not present",
+		})
+		return
+	}
+
+	ci, err := getClusterFromDb(clusterId)
+	if errors.Is(err, fs.ErrNotExist) {
+		log.Println(err)
+		respond(http.StatusInternalServerError, w, map[string]interface{}{
+			"message": "sqlite database was not found",
+		})
+	}
+
+	if err == sql.ErrNoRows {
+		respond(http.StatusNotFound, w, map[string]interface{}{
+			"message": "no cluster found with matching id",
+		})
+		return
+	} else if err != nil {
+		log.Println(err)
+		respond(http.StatusInternalServerError, w, map[string]interface{}{
+			"message": "could not get cluster details",
+		})
+		return
+	}
+
+	respond(http.StatusOK, w, map[string]interface{}{
+		"data": ci,
+	})
+}
+
+func getClusterFromDb(clusterId string) (clusterInfo, error) {
+	var ci clusterInfo
+	path := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID
+	dsn := path + "/" + config.Cfg.UserID + ".db"
+	if _, err := os.Stat(dsn); errors.Is(err, fs.ErrNotExist) {
+		return ci, err
+	}
+	db, err := sql.Open("sqlite3", dsn)
+	if err != nil {
+		return ci, err
+	}
+	defer db.Close()
+
+	query := `SELECT id, clusterId, name, username, port FROM clusterInfo WHERE clusterId = ? LIMIT 1`
+	err = db.QueryRow(query, clusterId).Scan(
+		&ci.ID,
+		&ci.ClusterID,
+		&ci.Name,
+		&ci.Username,
+		&ci.Port,
+	)
+	return ci, err
 }
