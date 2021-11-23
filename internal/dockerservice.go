@@ -18,14 +18,15 @@ type LinePrefixLogger struct {
 }
 
 type DockerService struct {
-	DockerClient  *client.Client
-	Name          string            `yaml:"name"`
-	NetworkName   string            `yaml:"network_name"`
-	RestartPolicy string            `yaml:"restart"`
-	Ports         map[int]int       `yaml:"ports"`
-	Environment   map[string]string `yaml:"environment"`
-	Volumes       []string          `yaml:"volumes"`
-	Image         string            `yaml:"image"`
+	DockerClient    *client.Client
+	Name            string            `yaml:"name"`
+	NetworkName     string            `yaml:"network_name"`
+	RestartPolicy   string            `yaml:"restart"`
+	Ports           map[int]int       `yaml:"ports"`
+	Environment     map[string]string `yaml:"environment"`
+	Volumes         []string          `yaml:"volumes"`
+	Image           string            `yaml:"image"`
+	RemoveContainer bool              `yaml:"remove_container"`
 }
 
 func (ds DockerService) buildArgs() []string {
@@ -43,6 +44,11 @@ func (ds DockerService) buildArgs() []string {
 
 	// Restart policy
 	args = append(args, "--restart", ds.RestartPolicy)
+
+	// Remove container
+	if ds.RemoveContainer {
+		args = append(args, "--rm")
+	}
 
 	args = append(args, ds.Image)
 
@@ -88,4 +94,25 @@ func NewPgExporterService(cli *client.Client, networkName, dbName, postgresUsern
 		Image: "quay.io/prometheuscommunity/postgres-exporter",
 	}
 	return exporterSvc
+}
+
+func NewPgBackupService(cli *client.Client, awsAccessKey, awsAccessKeyId, pgHost, walgS3Prefix, networkName, postgresUsername, postgresPassword string) DockerService {
+	backupSvc := DockerService{
+		DockerClient:  cli,
+		Name:          "postgres_backup",
+		NetworkName:   networkName,
+		RestartPolicy: "no",
+		Environment: map[string]string{
+			"AWS_SECRET_ACCESS_KEY": awsAccessKey,
+			"AWS_ACCESS_KEY_ID":     awsAccessKeyId,
+			"PGHOST":                pgHost,
+			"PGPASSWORD":            postgresPassword,
+			"PGUSER":                postgresUsername,
+			"PGDATABASE":            "postgres",
+			"WALG_S3_PREFIX":        walgS3Prefix,
+		},
+		Image:           "spinuphost/walg:latest",
+		RemoveContainer: true,
+	}
+	return backupSvc
 }
