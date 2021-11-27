@@ -23,4 +23,5 @@ jobs:
         goarch: ${{ matrix.goarch }}
         goversion: "https://dl.google.com/go/go1.16.5.linux-amd64.tar.gz"
         binary_name: "spinup-backend"
+        ldflags: "-X 'main.apiVersion=v0.2-alpha'"
         extra_files: README.md CONTRIBUTING.md
