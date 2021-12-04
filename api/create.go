@@ -48,7 +48,7 @@ type dbCluster struct {
 	MajVersion uint
 	MinVersion uint
 	Memory     string
-	Storage    string
+	CPU        string
 	Monitoring string
 }
 
