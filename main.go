@@ -2,6 +2,8 @@ package main
 
 import (
 	"embed"
+	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -11,13 +13,18 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/cors"
+	"gopkg.in/yaml.v3"
+
 	"github.com/spinup-host/api"
 	"github.com/spinup-host/config"
 	"github.com/spinup-host/metrics"
-	"gopkg.in/yaml.v3"
 )
 
-func init() {
+var (
+	apiVersion = "dev"
+)
+
+func validateConfig() {
 	file, err := os.Open("config.yaml")
 	fatal(err)
 	defer file.Close()
@@ -38,6 +45,15 @@ func init() {
 }
 
 func main() {
+	version := flag.Bool("v", false, "display the Spinup API version and exit")
+	flag.Parse()
+	if *version {
+		fmt.Printf("Spinup server version: %s\n", apiVersion)
+		os.Exit(0)
+		return
+	}
+
+	validateConfig()
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", api.Hello)
