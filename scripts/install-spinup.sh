@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-# read SPINUP_DIR from env (or default to $HOME/.local/spinup)
-# download go-release into $SPINUP_DIR/spinup
-# download spinup-dash into $SPINUP_DIR/dashboard/
-# download and possibly populate config.example.yaml into config.yaml
-# prompt to add $SPINUP_DIR to path
-
 if [ ! $(command -v "docker") ]; then
     echo "Cannot find or execute docker command"
     exit 1
@@ -14,6 +8,11 @@ fi
 if [ ! $(command -v "docker-compose") ]; then
     echo "Cannot find or execute docker-compose command"
     exit 1
+fi
+
+if [ ! $(command -v "openssl") ]; then
+  echo "Cannot find or execute openssl command"
+  exit 1
 fi
 
 SPINUP_DIR=${SPINUP_DIR:-"${HOME}/.local/spinup"}
@@ -34,13 +33,14 @@ curl -LSs ${API_DL_URL} -o ${TMP_DIR}/${SPINUP_PACKAGE}
 tar xzvf ${TMP_DIR}/${SPINUP_PACKAGE} -C "${TMP_DIR}/"
 rm -f ${TMP_DIR}/${SPINUP_PACKAGE}
 
-#${TMP_DIR}/spinup-backend -v
+${TMP_DIR}/spinup-backend version
 cp ${TMP_DIR}/spinup-backend ${SPINUP_DIR}/spinup
 
-git clone --depth=1 https://github.com/spinup-host/spinup-dash/ ${TMP_DIR}/spinup-dash
+git clone --depth=1 https://github.com/spinup-host/spinup-dash.git ${TMP_DIR}/spinup-dash
 cd ${TMP_DIR}/spinup-dash
 npm install --ignore-scripts
-cp -ar ${TMP_DIR} ${SPINUP_DIR}/spinup-dash
+npm run build
+cp -ar ${TMP_DIR}/spinup-dash/build ${SPINUP_DIR}/spinup-dash
 
 cd ${SPINUP_DIR}
 cat >config.yaml <<-EOF
@@ -54,5 +54,16 @@ cat >config.yaml <<-EOF
     architecture: amd64
     projectDir: ${SPINUP_DIR}
 EOF
+
+cat >.env <<-EOF
+  REACT_APP_CLIENT_ID=abcdefghijk
+  REACT_APP_REDIRECT_URI=http://localhost:3000/login
+  REACT_APP_GITHUB_SERVER=http://localhost:3000/githubAuth
+  REACT_APP_SERVER_URI=http://localhost:3000/createservice
+  REACT_APP_LIST_URI=http://localhost:3000/listcluster
+EOF
+
+openssl genrsa -out ${SPINUP_DIR}/app.rsa 4096
+openssl rsa -in ${SPINUP_DIR}/app.rsa -pubout > ${SPINUP_DIR}/app.rsa.pub
 
 echo "Setup complete! To run spinup from your terminal, add ${SPINUP_DIR} to your shell path"
