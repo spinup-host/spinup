@@ -16,12 +16,12 @@ Currently we only support Postgres dbms, but we should be able to support other 
 ### Linux
 - To get started with Spinup on Linux, run the installation script using the command below:
 ```bash
- $ bash < <(curl -s https://raw.githubusercontent.com/spinup-host/spinup/main/scripts/install-spinup.sh)
+bash < <(curl -s https://raw.githubusercontent.com/spinup-host/spinup/main/scripts/install-spinup.sh)
 ```
 - Add the Spinup installation directory (default is `$HOME/.local/spinup`) to your shell PATH to use Spinup from your terminal.
 - Start the Spinup servers (both API and frontend) by running:
 ```bash
-$ spinup start
+spinup start
 ```
 
 ### Others
