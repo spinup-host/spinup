@@ -1,4 +1,4 @@
-package dockerservice
+package internal
 
 import (
 	"context"

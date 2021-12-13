@@ -12,19 +12,10 @@ We are currently using Github Authentication. We should be able to support other
 Currently we only support Postgres dbms, but we should be able to support other open source databases like [MySQL](https://www.mysql.com/), [MariaDB](https://mariadb.org/) etc.
 
 ![architecture](architecture.jpeg)
-## Installation
-### Linux
-- To get started with Spinup on Linux, run the installation script using the command below:
-```bash
- $ bash < <(curl -s https://raw.githubusercontent.com/spinup-host/spinup/main/scripts/install-spinup.sh)
-```
-- Add the Spinup installation directory (default is `$HOME/.local/spinup`) to your shell PATH to use Spinup from your terminal.
-- Start the Spinup servers (both API and frontend) by running:
-```bash
-$ spinup start
-```
+### How to run
 
-### Others
+#### Requirement for JWT
+We use JWT for verification. You need to have a private and public key that you can create using OpenSSL:
 
 **To create a private key**
 ```
@@ -55,9 +46,6 @@ common:
  **To run spinup**
  
  ```go run main.go```
-
-#### Authentication
-We use JWT for verification. You need to have a private and public key that you can create using OpenSSL:
 
 On another terminal you can start the [dash](https://github.com/spinup-host/spinup-dash) to access the backend.
 
