@@ -6,8 +6,6 @@ name: "pre-release"
 jobs:
   releases-matrix:
     runs-on: ubuntu-latest
-    env:
-        RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
     strategy:
       matrix:
         # build and publish in parallel: linux/386, linux/amd64, windows/386, windows/amd64, darwin/amd64 
@@ -19,6 +17,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: wangyoucao577/go-release-action@v1.20
+      env:
+        RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
