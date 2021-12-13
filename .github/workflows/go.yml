@@ -6,6 +6,8 @@ name: "pre-release"
 jobs:
   releases-matrix:
     runs-on: ubuntu-latest
+    env:
+        RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
     strategy:
       matrix:
         # build and publish in parallel: linux/386, linux/amd64, windows/386, windows/amd64, darwin/amd64 
@@ -23,5 +25,5 @@ jobs:
         goarch: ${{ matrix.goarch }}
         goversion: "https://dl.google.com/go/go1.16.5.linux-amd64.tar.gz"
         binary_name: "spinup-backend"
-        ldflags: "-X 'main.apiVersion=v0.2-alpha'"
+        ldflags: "-X 'main.apiVersion=$RELEASE_TAG_NAME'"
         extra_files: README.md CONTRIBUTING.md
