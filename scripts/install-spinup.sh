@@ -33,7 +33,7 @@ git clone --depth=1 https://github.com/spinup-host/spinup-dash.git ${SPINUP_TMP_
 cd ${SPINUP_TMP_DIR}/spinup-dash
 npm install --ignore-scripts
 npm run build
-cp -ar ${SPINUP_TMP_DIR}/spinup-dash/build ${SPINUP_DIR}/spinup-dash
+cp -a -R ${SPINUP_TMP_DIR}/spinup-dash/build ${SPINUP_DIR}/spinup-dash
 
 cd ${SPINUP_DIR}
 cat >config.yaml <<-EOF
