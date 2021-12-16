@@ -17,11 +17,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: wangyoucao577/go-release-action@v1.20
+      env:
+        RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         goversion: "https://dl.google.com/go/go1.16.5.linux-amd64.tar.gz"
         binary_name: "spinup-backend"
-        ldflags: "-X 'main.apiVersion=v0.2-alpha'"
+        ldflags: "-X 'main.apiVersion=$RELEASE_TAG_NAME'"
         extra_files: README.md CONTRIBUTING.md

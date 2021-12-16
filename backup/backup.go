@@ -2,10 +2,10 @@ package backup
 
 import (
 	"fmt"
+	"github.com/spinup-host/internal/dockerservice"
 	"log"
 
 	"github.com/docker/docker/client"
-	"github.com/spinup-host/internal"
 )
 
 func TriggerBackup(networkName, awsAccessKey, awsAccessKeyId, pgHost, pgUsername, pgPassword, walgS3Prefix string) func() {
@@ -13,7 +13,7 @@ func TriggerBackup(networkName, awsAccessKey, awsAccessKeyId, pgHost, pgUsername
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
 	}
-	backupSvc := internal.NewPgBackupService(cli, awsAccessKey, awsAccessKeyId, pgHost, walgS3Prefix, networkName, pgUsername, pgPassword)
+	backupSvc := dockerservice.NewPgBackupService(cli, awsAccessKey, awsAccessKeyId, pgHost, walgS3Prefix, networkName, pgUsername, pgPassword)
 	return func() {
 		fmt.Println("backup triggered")
 		err = backupSvc.Start()
