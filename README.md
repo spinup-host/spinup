@@ -14,7 +14,12 @@ Currently we only support Postgres dbms, but we should be able to support other 
 ![architecture](architecture.jpeg)
 ## Installation
 ### Linux
-- To get started with Spinup on Linux, run the installation script using the command below:
+To get started with Spinup on Linux:
+- Create a GitHub project and export the project's client ID
+```bash
+export CLIENT_ID=<GITHUB_CLIENT_ID>
+```
+- Run the installation script using the command below:
 ```bash
 bash < <(curl -s https://raw.githubusercontent.com/spinup-host/spinup/main/scripts/install-spinup.sh)
 ```

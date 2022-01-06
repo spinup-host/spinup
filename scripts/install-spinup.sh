@@ -31,8 +31,17 @@ cp ${SPINUP_TMP_DIR}/spinup-backend ${SPINUP_DIR}/spinup
 
 git clone --depth=1 https://github.com/spinup-host/spinup-dash.git ${SPINUP_TMP_DIR}/spinup-dash
 cd ${SPINUP_TMP_DIR}/spinup-dash
+# setup env variables for dashboard's npm build
+cat >.env <<-EOF
+REACT_APP_CLIENT_ID=${CLIENT_ID}
+REACT_APP_REDIRECT_URI="http://localhost:3000/login"
+REACT_APP_SERVER_URI="http://localhost:4434"
+REACT_APP_URL="https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REACT_APP_REDIRECT_URI}"
+EOF
+cat .env
 npm install --ignore-scripts
 npm run build
+rm -rf ${SPINUP_DIR}/spinup-dash
 cp -a -R ${SPINUP_TMP_DIR}/spinup-dash/build ${SPINUP_DIR}/spinup-dash
 
 cd ${SPINUP_DIR}
@@ -46,14 +55,6 @@ common:
   ]
   architecture: amd64
   projectDir: ${SPINUP_DIR}
-EOF
-
-cat >.env <<-EOF
-REACT_APP_CLIENT_ID=abcdefghijk
-REACT_APP_REDIRECT_URI=http://localhost:3000/login
-REACT_APP_GITHUB_SERVER=http://localhost:3000/githubAuth
-REACT_APP_SERVER_URI=http://localhost:3000/createservice
-REACT_APP_LIST_URI=http://localhost:3000/listcluster
 EOF
 
 openssl genrsa -out ${SPINUP_DIR}/app.rsa 4096
