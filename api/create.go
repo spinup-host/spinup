@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/spinup-host/internal/dockerservice"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,6 +14,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/spinup-host/internal/dockerservice"
 
 	"github.com/docker/docker/client"
 	_ "github.com/mattn/go-sqlite3"
@@ -32,7 +33,7 @@ type service struct {
 	//Port         uint
 	Db            dbCluster
 	DockerNetwork string
-
+	ApiKey        string
 	BackupEnabled bool
 	Backup        backupConfig
 }
@@ -47,8 +48,9 @@ type dbCluster struct {
 	MajVersion uint
 	MinVersion uint
 	Memory     string
-	CPU        string
+	Storage    string
 	Monitoring string
+	CPU        string
 }
 
 type backupConfig struct {
@@ -78,12 +80,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
-	authHeader := req.Header.Get("Authorization")
-	userId, err := config.ValidateToken(authHeader)
-	if err != nil {
-		log.Printf("error validating token %v", err)
-		http.Error(w, "error validating token", 500)
-	}
+
 	var s service
 	byteArray, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -93,11 +90,29 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Fatalf("fatal: reading from readall body %v", err)
 	}
-	if s.UserID != userId {
-		log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
-		http.Error(w, "userid doesn't match", http.StatusInternalServerError)
-		return
+	authHeader := req.Header.Get("Authorization")
+	apiKeyHeader := req.Header.Get("x-api-key")
+	if apiKeyHeader == "" {
+		userId, err := config.ValidateToken(authHeader)
+		if err != nil {
+			log.Printf("error validating token %v", err)
+			http.Error(w, "error validating token", 500)
+		}
+		if s.UserID != userId {
+			log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
+			http.Error(w, "userid doesn't match", http.StatusInternalServerError)
+			return
+		}
 	}
+	if authHeader == "" {
+		err := config.ValidateApiKey(apiKeyHeader)
+		if err != nil {
+			log.Printf("error validating apiKey %v", err)
+			http.Error(w, "error validating apiKey", 500)
+			return
+		}
+	}
+
 	if s.Db.Type != "postgres" {
 		fmt.Fprintf(w, "currently we don't support %s", s.Db.Type)
 		http.Error(w, "db type is currently not supported", 500)
