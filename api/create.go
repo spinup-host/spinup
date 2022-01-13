@@ -92,25 +92,16 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	}
 	authHeader := req.Header.Get("Authorization")
 	apiKeyHeader := req.Header.Get("x-api-key")
-	if apiKeyHeader == "" {
-		userId, err := config.ValidateToken(authHeader)
-		if err != nil {
-			log.Printf("error validating token %v", err)
-			http.Error(w, "error validating token", 500)
-		}
-		if s.UserID != userId {
-			log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
-			http.Error(w, "userid doesn't match", http.StatusInternalServerError)
-			return
-		}
+	userId, err := config.ValidateUser(authHeader, apiKeyHeader)
+
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
 	}
-	if authHeader == "" {
-		err := config.ValidateApiKey(apiKeyHeader)
-		if err != nil {
-			log.Printf("error validating apiKey %v", err)
-			http.Error(w, "error validating apiKey", 500)
-			return
-		}
+
+	if authHeader != "" && s.UserID != userId {
+		log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
+		http.Error(w, "userid doesn't match", 500)
 	}
 
 	if s.Db.Type != "postgres" {

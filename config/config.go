@@ -41,9 +41,28 @@ func ValidateToken(authHeader string) (string, error) {
 
 func ValidateApiKey(apiKey string) error {
 	if apiKey != Cfg.Common.ApiKey {
-		return errors.New("Invalid Api Key!")
+		return errors.New("invalid api key")
 	}
 	return nil
+}
+
+func ValidateUser(authHeader string, apiKeyHeader string) (string, error) {
+	if apiKeyHeader == "" {
+		userId, err := ValidateToken(authHeader)
+		if err != nil {
+			log.Printf("error validating token %v", err)
+			return "", errors.New("error validating token")
+		}
+		return userId, nil
+	}
+	if authHeader == "" {
+		err := ValidateApiKey(apiKeyHeader)
+		if err != nil {
+			log.Printf("error validating apiKey %v", err)
+			return "", errors.New("error validating apiKey")
+		}
+	}
+	return "", nil
 }
 
 func JWTToString(tokenString string) (string, error) {
