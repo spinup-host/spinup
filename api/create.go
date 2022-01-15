@@ -95,13 +95,13 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	userId, err := config.ValidateUser(authHeader, apiKeyHeader)
 
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	if authHeader != "" && s.UserID != userId {
 		log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
-		http.Error(w, "userid doesn't match", 500)
+		http.Error(w, "userid doesn't match", http.StatusUnauthorized)
 	}
 
 	if s.Db.Type != "postgres" {

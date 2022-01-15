@@ -24,7 +24,7 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 	var err error
 	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
