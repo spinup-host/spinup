@@ -136,7 +136,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
-	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.Db.Name + ".db"
+	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.UserID + ".db"
 	db, err := OpenSqliteDB(path)
 	if err != nil {
 		ErrorResponse(w, "error accessing database", 500)
@@ -313,7 +313,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.Db.Name + ".db"
+	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.UserID + ".db"
 	db, err := OpenSqliteDB(path)
 	if err != nil {
 		ErrorResponse(w, "error accessing database", 500)
