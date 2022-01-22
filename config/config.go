@@ -17,6 +17,7 @@ type Configuration struct {
 		Ports        []int  `yaml:"ports"`
 		ClientID     string `yaml:"client_id"`
 		ClientSecret string `yaml:"client_secret"`
+		ApiKey       string `yaml:"api_key"`
 	} `yaml:"common"`
 	VerifyKey *rsa.PublicKey
 	SignKey   *rsa.PrivateKey
@@ -40,6 +41,32 @@ func ValidateToken(authHeader string) (string, error) {
 		return "", errors.New("user ID cannot be blank")
 	}
 	return userID, nil
+}
+
+func ValidateApiKey(apiKey string) error {
+	if apiKey != Cfg.Common.ApiKey {
+		return errors.New("invalid api key")
+	}
+	return nil
+}
+
+func ValidateUser(authHeader string, apiKeyHeader string) (string, error) {
+	if apiKeyHeader == "" {
+		userId, err := ValidateToken(authHeader)
+		if err != nil {
+			log.Printf("error validating token %v", err)
+			return "", errors.New("error validating token")
+		}
+		return userId, nil
+	}
+	if authHeader == "" {
+		err := ValidateApiKey(apiKeyHeader)
+		if err != nil {
+			log.Printf("error validating apiKey %v", err)
+			return "", errors.New("error validating apiKey")
+		}
+	}
+	return "", nil
 }
 
 func JWTToString(tokenString string) (string, error) {

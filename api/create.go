@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/spinup-host/internal/dockerservice"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,6 +14,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/spinup-host/internal/dockerservice"
 
 	"github.com/docker/docker/client"
 	_ "github.com/mattn/go-sqlite3"
@@ -32,7 +33,7 @@ type service struct {
 	//Port         uint
 	Db            dbCluster
 	DockerNetwork string
-
+	ApiKey        string
 	BackupEnabled bool
 	Backup        backupConfig
 }
@@ -49,6 +50,7 @@ type dbCluster struct {
 	Memory     string
 	Storage    string
 	Monitoring string
+	CPU        string
 }
 
 type backupConfig struct {
@@ -85,6 +87,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "error validating token", http.StatusUnauthorized)
 		return
 	}
+
 	var s service
 	byteArray, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -94,11 +97,20 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Fatalf("fatal: reading from readall body %v", err)
 	}
-	if s.UserID != userId {
-		log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
-		http.Error(w, "userid doesn't match", http.StatusInternalServerError)
+	authHeader := req.Header.Get("Authorization")
+	apiKeyHeader := req.Header.Get("x-api-key")
+	userId, err := config.ValidateUser(authHeader, apiKeyHeader)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+
+	if authHeader != "" && s.UserID != userId {
+		log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
+		http.Error(w, "userid doesn't match", http.StatusUnauthorized)
+	}
+
 	if s.Db.Type != "postgres" {
 		fmt.Fprintf(w, "currently we don't support %s", s.Db.Type)
 		http.Error(w, "db type is currently not supported", 500)

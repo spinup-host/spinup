@@ -11,5 +11,11 @@ services:
       POSTGRES_PASSWORD: {{ .PostgresPassword }}
     volumes:
       - data-volume-{{ .UserID }}:/var/lib/postgresql/data
+      
+    deploy:
+      resources:
+        limits:
+          memory: "{{.Memory}}"
+          cpus: "{{.CPU}}"  
 volumes:
   data-volume-{{ .UserID }}:
