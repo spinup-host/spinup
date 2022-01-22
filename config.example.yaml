@@ -2,6 +2,9 @@ common:
   ports: [
     5432, 5433, 5434, 5435, 5436, 5437
   ]
+  db_metric_ports: [
+      55432, 55433, 55434, 55435, 55436, 55437
+  ]
   architecture: amd64
   projectDir: <PROJECT_DIR>
   client_id: <CLIENT_ID>

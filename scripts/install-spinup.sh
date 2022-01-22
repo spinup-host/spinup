@@ -8,6 +8,16 @@ do
   fi
 done
 
+if [ -z "$CLIENT_ID" ]; then
+  echo "No value for environment variable CLIENT_ID"
+  exit 1
+fi
+
+if [ -z "$CLIENT_SECRET" ]; then
+  echo "No value for environment variable CLIENT_SECRET"
+  exit 1
+fi
+
 SPINUP_DIR=${SPINUP_DIR:-"${HOME}/.local/spinup"}
 SPINUP_VERSION=$(curl --silent "https://api.github.com/repos/spinup-host/spinup/releases" | jq -r 'first | .tag_name')
 
@@ -36,6 +46,7 @@ cat >.env <<-EOF
 REACT_APP_CLIENT_ID=${CLIENT_ID}
 REACT_APP_REDIRECT_URI="http://localhost:3000/login"
 REACT_APP_SERVER_URI="http://localhost:4434"
+REACT_APP_GITHUB_SERVER="http://localhost:4434/githubAuth"
 REACT_APP_URL="https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REACT_APP_REDIRECT_URI}"
 EOF
 cat .env
@@ -55,6 +66,8 @@ common:
   ]
   architecture: amd64
   projectDir: ${SPINUP_DIR}
+  client_id: ${CLIENT_ID}
+  client_secret: ${CLIENT_SECRET}
 EOF
 
 openssl genrsa -out ${SPINUP_DIR}/app.rsa 4096
