@@ -26,6 +26,7 @@ import (
 var (
 	cfgFile string
 	uiPath string
+	apiOnly bool
 
 	apiPort = ":4434"
 	uiPort = ":3000"
@@ -65,17 +66,8 @@ func startCmd() *cobra.Command {
 		Use:   "start",
 		Short: "start the spinup API and frontend servers",
 		Run: func(cmd *cobra.Command, args []string) {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				log.Fatalf("FATAL: obtaining home directory: %v", err)
-			}
-			cmd.PersistentFlags().StringVar(&cfgFile, "config",
-				fmt.Sprintf("%s/.local/spinup/config.yaml", home), "Path to spinup configuration")
-			cmd.PersistentFlags().StringVar(&uiPath, "ui-path",
-				fmt.Sprintf("%s/.local/spinup/spinup-dash", home), "Path to spinup frontend")
-
 			log.Println(fmt.Sprintf("INFO: using config file: %s", cfgFile))
-			if err = validateConfig(cfgFile); err != nil {
+			if err := validateConfig(cfgFile); err != nil {
 				log.Fatalf("FATAL: validating config: %v", err)
 			}
 			log.Println("INFO: initial validations successful")
@@ -84,16 +76,10 @@ func startCmd() *cobra.Command {
 			if err != nil {
 				log.Fatalf("FATAL: starting API server %v", err)
 			}
-			uiListener, err := net.Listen("tcp", uiPort)
-			if err != nil {
-				log.Fatalf("FATAL: starting UI server %v", err)
-			}
 			apiServer := &http.Server{
 				Handler: apiHandler(),
 			}
-			uiServer := &http.Server{
-				Handler: uiHandler(),
-			}
+			defer stop(apiServer)
 
 			stopCh := make(chan os.Signal, 1)
 			go func() {
@@ -101,19 +87,37 @@ func startCmd() *cobra.Command {
 				apiServer.Serve(apiListener)
 			}()
 
-			go func() {
-				log.Println(fmt.Sprintf("INFO: starting Spinup UI on port %s", uiPort))
-				uiServer.Serve(uiListener)
-			}()
+			if apiOnly == false {
+				uiListener, err := net.Listen("tcp", uiPort)
+				if err != nil {
+					log.Fatalf("FATAL: starting UI server %v", err)
+				}
 
-			defer stop(apiServer)
-			defer stop(uiServer)
+				uiServer := &http.Server{
+					Handler: uiHandler(),
+				}
+				go func() {
+					log.Println(fmt.Sprintf("INFO: starting Spinup UI on port %s", uiPort))
+					uiServer.Serve(uiListener)
+				}()
+				defer stop(uiServer)
+			}
 
 			signal.Notify(stopCh, syscall.SIGINT, syscall.SIGTERM)
 			log.Println(fmt.Sprint(<-stopCh))
 			log.Println("stopping spinup apiServer")
 		},
 	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("FATAL: obtaining home directory: %v", err)
+	}
+	sc.Flags().StringVar(&cfgFile, "config",
+		fmt.Sprintf("%s/.local/spinup/config.yaml", home), "Path to spinup configuration")
+	sc.Flags().StringVar(&uiPath, "ui-path",
+		fmt.Sprintf("%s/.local/spinup/spinup-dash", home), "Path to spinup frontend")
+	sc.Flags().BoolVar(&apiOnly,"api-only", false, "Only run the API server (without the UI server). Useful for development")
 
 	return sc
 }

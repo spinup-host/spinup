@@ -35,6 +35,10 @@ func ValidateToken(authHeader string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	if userID == "" {
+		return "", errors.New("user ID cannot be blank")
+	}
 	return userID, nil
 }
 

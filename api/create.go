@@ -82,7 +82,8 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	userId, err := config.ValidateToken(authHeader)
 	if err != nil {
 		log.Printf("error validating token %v", err)
-		http.Error(w, "error validating token", 500)
+		http.Error(w, "error validating token", http.StatusUnauthorized)
+		return
 	}
 	var s service
 	byteArray, err := ioutil.ReadAll(req.Body)
@@ -136,7 +137,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
-	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.Db.Name + ".db"
+	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.UserID + ".db"
 	db, err := OpenSqliteDB(path)
 	if err != nil {
 		ErrorResponse(w, "error accessing database", 500)
@@ -313,7 +314,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.Db.Name + ".db"
+	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.UserID + ".db"
 	db, err := OpenSqliteDB(path)
 	if err != nil {
 		ErrorResponse(w, "error accessing database", 500)
