@@ -15,9 +15,10 @@ Currently we only support Postgres dbms, but we should be able to support other 
 ## Installation
 ### Linux
 To get started with Spinup on Linux:
-- Create a GitHub project and export the project's client ID
+- Create a GitHub project. Next, export the project's client ID and Secret as environment variables
 ```bash
 export CLIENT_ID=<GITHUB_CLIENT_ID>
+export CLIENT_SECRET=<GITHUB_CLIENT_SECRET>
 ```
 - Run the installation script using the command below:
 ```bash
