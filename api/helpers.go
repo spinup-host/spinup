@@ -56,8 +56,6 @@ func CreateDockerComposeFile(absolutepath string, s service) error {
 		Port             int
 		PostgresUsername string
 		PostgresPassword string
-		Memory           string
-		CPU              string
 	}{
 		s.UserID,
 		s.Architecture,
@@ -65,8 +63,6 @@ func CreateDockerComposeFile(absolutepath string, s service) error {
 		s.Db.Port,
 		s.Db.Username,
 		s.Db.Password,
-		s.Db.Memory,
-		s.Db.CPU,
 	}
 	err = templ.Execute(f, data)
 	if err != nil {

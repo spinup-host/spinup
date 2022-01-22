@@ -78,9 +78,7 @@ curl -X POST http://localhost:4434/createservice \
             "type": "postgres",
             "name": "localtest",
             "username": "spinup",
-            "password": "spinup",
-            "memory": "4000m",
-            "cpu": "1.5"
+            "password": "spinup"
             },
         "version": {"maj":9,"min":6}
         }'

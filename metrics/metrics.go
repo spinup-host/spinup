@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -17,13 +18,12 @@ func HandleMetrics(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	authHeader := req.Header.Get("Authorization")
-	apiKeyHeader := req.Header.Get("x-api-key")
 	var err error
-	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
+	config.Cfg.UserID, err = config.ValidateToken(authHeader)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		log.Printf("error validating token %v", err)
+		http.Error(w, "error validating token", 500)
 	}
-
 	recordMetrics()
 	promhttp.Handler().ServeHTTP(w, req)
 }
