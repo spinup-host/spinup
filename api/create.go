@@ -82,7 +82,8 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	userId, err := config.ValidateToken(authHeader)
 	if err != nil {
 		log.Printf("error validating token %v", err)
-		http.Error(w, "error validating token", 500)
+		http.Error(w, "error validating token", http.StatusUnauthorized)
+		return
 	}
 	var s service
 	byteArray, err := ioutil.ReadAll(req.Body)

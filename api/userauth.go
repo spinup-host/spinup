@@ -31,7 +31,6 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	type userAuth struct {
 		Code string `json:"code"`
 	}
-	log.Println("inside githubauth::")
 	type githubAuth struct {
 		Code         string `json:"code"`
 		ClientID     string `json:"client_id"`

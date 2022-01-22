@@ -24,7 +24,8 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 	config.Cfg.UserID, err = config.ValidateToken(authHeader)
 	if err != nil {
 		log.Printf("error validating token %v", err)
-		http.Error(w, "error validating token", 500)
+		http.Error(w, "error validating token", http.StatusUnauthorized)
+		return
 	}
 	dbPath := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID
 	clusterInfos := ReadClusterInfo(dbPath, config.Cfg.UserID)
@@ -56,7 +57,7 @@ func ReadClusterInfo(path, dbName string) []clusterInfo {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	rows, err := db.Query("select clusterId, name, port from clusterInfo")
+	rows, err := db.Query("select id, clusterId, name, username, port from clusterInfo")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func ReadClusterInfo(path, dbName string) []clusterInfo {
 	var clusterInfos []clusterInfo
 	var cluster clusterInfo
 	for rows.Next() {
-		err = rows.Scan(&cluster.ClusterID, &cluster.Name, &cluster.Port)
+		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Port)
 		if err != nil {
 			log.Fatal(err)
 		}
