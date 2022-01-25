@@ -133,18 +133,40 @@ postgres=# \dt
     - Code: 401 UNAUTHORIZED
 
         Content: `{ error : "You are unauthorized to make this request." }`
+### Alternate Auth
 
+- URL
+
+/altauth
+
+- Method:
+
+`POST`
+
+#### Api Key Header
+`x-api-key: <API_KEY>`
+
+- Success Response:
+    - Code: 200
+    - Content: `{Valid Api Key}`
+
+- Error Response:
+
+    - Code: 401 UNAUTHORIZED
+
+        Content: `{ error : "error validating api key" }`
 ### Create Service
 `/createservice` - Creates a new database service. Only Postgres databases are supported at the moment
 #### Authentication Header
 `Bearer <GITHUB_TOKEN>`
-
+### Api Key Header
+`x-api-key: <API_KEY>`
 #### Method:
 
 `POST`
 
 #### Data Params
-- `userId=[String]`: GitHub username of the user.
+- `userId=[String]`: GitHub username of the user.(Necessary only if using github authentication)
 - `version=[Object]`: Preferred database version. It must have the following properties:
     - `maj=[Integer]`: Database major version. E.g for Postgres:9.6, the value here is 9.
     - `min=[Integer]`: Database major version. E.g for Postgres:9.6, the value here is 6.
@@ -180,6 +202,8 @@ postgres=# \dt
 `GET`
 #### Authentication Header
 `Bearer <GITHUB_TOKEN>`
+#### Api Key Header
+`x-api-key: <API_KEY>`
 #### Path Parameters
 - `cluster_id=[String]`: ID of the cluster to be retrieved.
 #### Responses

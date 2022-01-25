@@ -20,11 +20,12 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	authHeader := req.Header.Get("Authorization")
+	apiKeyHeader := req.Header.Get("x-api-key")
 	var err error
-	config.Cfg.UserID, err = config.ValidateToken(authHeader)
+	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		log.Printf("error validating token %v", err)
-		http.Error(w, "error validating token", http.StatusUnauthorized)
+		log.Printf(err.Error())
+		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
 	dbPath := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID
@@ -85,12 +86,13 @@ func GetCluster(w http.ResponseWriter, r *http.Request) {
 	}
 	// todo (idoqo): move auth stuff to a "middleware"
 	authHeader := r.Header.Get("Authorization")
+	apiKeyHeader := r.Header.Get("x-api-key")
 	var err error
-	config.Cfg.UserID, err = config.ValidateToken(authHeader)
+	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		log.Printf("error validating token %v", err)
+		log.Printf(err.Error())
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
-			"message": "could not validate token",
+			"message": "could not validate user",
 		})
 		return
 	}

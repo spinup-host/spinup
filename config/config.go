@@ -17,6 +17,7 @@ type Configuration struct {
 		Ports        []int  `yaml:"ports"`
 		ClientID     string `yaml:"client_id"`
 		ClientSecret string `yaml:"client_secret"`
+		ApiKey       string `yaml:"api_key"`
 	} `yaml:"common"`
 	VerifyKey *rsa.PublicKey
 	SignKey   *rsa.PrivateKey
@@ -24,6 +25,36 @@ type Configuration struct {
 }
 
 var Cfg Configuration
+
+func ValidateUser(authHeader string, apiKeyHeader string) (string, error) {
+	if authHeader == "" && apiKeyHeader == "" {
+		return "", errors.New("no authorization keys found")
+	}
+	if apiKeyHeader == "" {
+		userId, err := ValidateToken(authHeader)
+		if err != nil {
+			log.Printf("error validating token %v", authHeader)
+			return "", errors.New("error validating token")
+		}
+		return userId, nil
+	}
+
+	if authHeader == "" {
+		err := ValidateApiKey(apiKeyHeader)
+		if err != nil {
+			log.Printf("error validating api-key %v", apiKeyHeader)
+			return "", errors.New("error validating api-key")
+		}
+	}
+	return "testuser", nil
+}
+
+func ValidateApiKey(apiKeyHeader string) error {
+	if apiKeyHeader != Cfg.Common.ApiKey {
+		return errors.New("invalid api key")
+	}
+	return nil
+}
 
 func ValidateToken(authHeader string) (string, error) {
 	splitToken := strings.Split(authHeader, "Bearer ")
