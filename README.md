@@ -57,6 +57,7 @@ common:
   projectDir: <PROJECT_DIR>
   client_id: <CLIENT_ID>
   client_secret: <CLIENT_SECRET>
+  api_key: <API_KEY> //if not using github authentication
  ```
  **To run spinup**
  
