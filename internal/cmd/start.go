@@ -25,11 +25,11 @@ import (
 
 var (
 	cfgFile string
-	uiPath string
+	uiPath  string
 	apiOnly bool
 
 	apiPort = ":4434"
-	uiPort = ":3000"
+	uiPort  = ":3000"
 )
 
 func apiHandler() http.Handler {
@@ -46,9 +46,10 @@ func apiHandler() http.Handler {
 	mux.HandleFunc("/cluster", api.GetCluster)
 	mux.HandleFunc("/metrics", metrics.HandleMetrics)
 	mux.HandleFunc("/createbackup", api.CreateBackup)
+	mux.HandleFunc("/altauth", api.AltAuth)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},
-		AllowedHeaders: []string{"authorization", "content-type"},
+		AllowedHeaders: []string{"authorization", "content-type", "x-api-key"},
 	})
 
 	return c.Handler(mux)
@@ -117,7 +118,7 @@ func startCmd() *cobra.Command {
 		fmt.Sprintf("%s/.local/spinup/config.yaml", home), "Path to spinup configuration")
 	sc.Flags().StringVar(&uiPath, "ui-path",
 		fmt.Sprintf("%s/.local/spinup/spinup-dash", home), "Path to spinup frontend")
-	sc.Flags().BoolVar(&apiOnly,"api-only", false, "Only run the API server (without the UI server). Useful for development")
+	sc.Flags().BoolVar(&apiOnly, "api-only", false, "Only run the API server (without the UI server). Useful for development")
 
 	return sc
 }

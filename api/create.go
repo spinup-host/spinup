@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/spinup-host/internal/dockerservice"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,6 +14,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/spinup-host/internal/dockerservice"
 
 	"github.com/docker/docker/client"
 	_ "github.com/mattn/go-sqlite3"
@@ -79,26 +80,37 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	authHeader := req.Header.Get("Authorization")
-	userId, err := config.ValidateToken(authHeader)
+	apiKeyHeader := req.Header.Get("x-api-key")
+
+	userId, err := config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		log.Printf("error validating token %v", err)
-		http.Error(w, "error validating token", http.StatusUnauthorized)
+		log.Printf(err.Error())
+		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
+
 	var s service
+
 	byteArray, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		log.Fatalf("fatal: reading from readall body %v", err)
 	}
+
 	err = json.Unmarshal(byteArray, &s)
+	if s.UserID == "" && apiKeyHeader != "" {
+		s.UserID = "testuser"
+	}
+
 	if err != nil {
 		log.Fatalf("fatal: reading from readall body %v", err)
 	}
-	if s.UserID != userId {
-		log.Printf("user %s trying to access /createservice using jwt userId %s", s.UserID, userId)
+
+	if s.UserID != "testuser" && userId != s.UserID {
+		log.Printf("user %s trying to access /createservice using userId %s", s.UserID, userId)
 		http.Error(w, "userid doesn't match", http.StatusInternalServerError)
 		return
 	}
+
 	if s.Db.Type != "postgres" {
 		fmt.Fprintf(w, "currently we don't support %s", s.Db.Type)
 		http.Error(w, "db type is currently not supported", 500)
