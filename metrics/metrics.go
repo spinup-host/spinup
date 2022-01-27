@@ -24,6 +24,7 @@ func HandleMetrics(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf(err.Error())
 		http.Error(w, "error validating user", http.StatusUnauthorized)
+		return
 	}
 	recordMetrics()
 	promhttp.Handler().ServeHTTP(w, req)

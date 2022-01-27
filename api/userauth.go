@@ -117,7 +117,6 @@ func AltAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	apiKeyHeader := r.Header.Get("x-api-key")
-	log.Println("inside altauth")
 	_, err := config.ValidateUser("", apiKeyHeader)
 
 	if err != nil {

@@ -134,7 +134,7 @@ postgres=# \dt
     - Code: 401 UNAUTHORIZED
 
         Content: `{ error : "You are unauthorized to make this request." }`
-### Alternate Auth
+### Simple Auth
 
 - URL
 
