@@ -33,20 +33,22 @@ type service struct {
 	//Port         uint
 	Db            dbCluster
 	DockerNetwork string
-
+	Version       version
 	BackupEnabled bool
 	Backup        backupConfig
 }
-
+type version struct {
+	Maj uint
+	Min uint
+}
 type dbCluster struct {
-	Name       string
-	ID         string
-	Type       string
-	Port       int
-	Username   string
-	Password   string
-	MajVersion uint
-	MinVersion uint
+	Name     string
+	ID       string
+	Type     string
+	Port     int
+	Username string
+	Password string
+
 	Memory     string
 	Storage    string
 	Monitoring string
@@ -97,6 +99,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = json.Unmarshal(byteArray, &s)
+	log.Printf("%d %d", s.Version.Maj, s.Version.Min)
 	if s.UserID == "" && apiKeyHeader != "" {
 		s.UserID = "testuser"
 	}
