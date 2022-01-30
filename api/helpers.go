@@ -54,6 +54,8 @@ func CreateDockerComposeFile(absolutepath string, s service) error {
 		Architecture     string
 		Type             string
 		Port             int
+		MajVersion       uint
+		MinVersion       uint
 		PostgresUsername string
 		PostgresPassword string
 	}{
@@ -61,6 +63,8 @@ func CreateDockerComposeFile(absolutepath string, s service) error {
 		s.Architecture,
 		s.Db.Type,
 		s.Db.Port,
+		s.Version.Maj,
+		s.Version.Min,
 		s.Db.Username,
 		s.Db.Password,
 	}
