@@ -18,11 +18,11 @@ import (
 	"github.com/spinup-host/internal/dockerservice"
 
 	"github.com/docker/docker/client"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/robfig/cron/v3"
 	"github.com/spinup-host/backup"
 	"github.com/spinup-host/config"
 	"github.com/spinup-host/misc"
+	_ "modernc.org/sqlite"
 )
 
 type service struct {
@@ -286,7 +286,7 @@ func lastContainerID() (string, error) {
 }
 
 func OpenSqliteDB(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}
