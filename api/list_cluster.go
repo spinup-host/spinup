@@ -11,6 +11,8 @@ import (
 	"os"
 
 	"github.com/spinup-host/config"
+
+	_ "modernc.org/sqlite"
 )
 
 func ListCluster(w http.ResponseWriter, req *http.Request) {
@@ -53,7 +55,7 @@ func ReadClusterInfo(path, dbName string) []clusterInfo {
 		log.Printf("INFO: no sqlite database")
 		return nil
 	}
-	db, err := sql.Open("sqlite3", dsn)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
