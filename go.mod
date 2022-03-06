@@ -1,4 +1,4 @@
-module github.com/spinup-host
+module github.com/spinup-host/spinup
 
 go 1.16
 
