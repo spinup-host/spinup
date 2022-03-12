@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/spinup-host/templates"
+	"github.com/spinup-host/spinup/templates"
 )
 
 //TODO: vicky find how to keep the templates/* outside of the api. ie need to figure how to do relative path.

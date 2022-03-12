@@ -8,8 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/spinup-host/api"
-	"github.com/spinup-host/config"
+	"github.com/spinup-host/spinup/api"
+	"github.com/spinup-host/spinup/config"
 )
 
 func HandleMetrics(w http.ResponseWriter, req *http.Request) {

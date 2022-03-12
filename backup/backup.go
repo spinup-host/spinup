@@ -2,7 +2,7 @@ package backup
 
 import (
 	"fmt"
-	"github.com/spinup-host/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/dockerservice"
 	"log"
 
 	"github.com/docker/docker/client"

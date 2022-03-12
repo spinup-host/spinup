@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spinup-host/api"
-	"github.com/spinup-host/config"
-	"github.com/spinup-host/metrics"
+	"github.com/spinup-host/spinup/api"
+	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/metrics"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/cors"

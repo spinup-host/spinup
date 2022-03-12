@@ -15,13 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spinup-host/internal/dockerservice"
-
 	"github.com/docker/docker/client"
 	"github.com/robfig/cron/v3"
-	"github.com/spinup-host/backup"
-	"github.com/spinup-host/config"
-	"github.com/spinup-host/misc"
+	"github.com/spinup-host/spinup/backup"
+	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/misc"
 	_ "modernc.org/sqlite"
 )
 

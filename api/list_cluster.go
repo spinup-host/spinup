@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/spinup-host/config"
+	"github.com/spinup-host/spinup/config"
 
 	_ "modernc.org/sqlite"
 )

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/spinup-host/config"
+	"github.com/spinup-host/spinup/config"
 )
 
 func stringToJWT(text string) (string, error) {
