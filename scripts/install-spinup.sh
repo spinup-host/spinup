@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for req in "docker" "docker-compose" "openssl" "npm";
+for req in "docker" "openssl" "npm";
 do
   if [ ! $(command -v "$req") ]; then
       echo "Cannot find or execute '$req' command"

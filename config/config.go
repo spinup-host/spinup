@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 )
@@ -25,6 +26,64 @@ type Configuration struct {
 }
 
 var Cfg Configuration
+
+type Service struct {
+	Duration time.Duration
+	UserID   string
+	// one of arm64v8 or arm32v7 or amd64
+	Architecture string
+	//Port         uint
+	Db            dbCluster
+	DockerNetwork string
+	Version       version
+	BackupEnabled bool
+	Backup        backupConfig
+}
+
+type version struct {
+	Maj uint
+	Min uint
+}
+type dbCluster struct {
+	Name     string
+	ID       string
+	Type     string
+	Port     int
+	Username string
+	Password string
+
+	Memory     string
+	Storage    string
+	Monitoring string
+}
+
+type backupConfig struct {
+	// https://man7.org/linux/man-pages/man5/crontab.5.html
+	Schedule map[string]interface{}
+	Dest     Destination `json:"Dest"`
+}
+
+type Destination struct {
+	Name         string
+	BucketName   string
+	ApiKeyID     string
+	ApiKeySecret string
+}
+type serviceResponse struct {
+	HostName    string
+	Port        int
+	ContainerID string
+}
+
+type ClusterInfo struct {
+	ID         int    `json:"id"`
+	ClusterID  string `json:"cluster_id"`
+	Name       string `json:"name"`
+	Port       int    `json:"port"`
+	Username   string `json:"username"`
+	MajVersion int    `json:"majversion"`
+	MinVersion int    `json:"minversion"`
+}
 
 func ValidateUser(authHeader string, apiKeyHeader string) (string, error) {
 	if authHeader == "" && apiKeyHeader == "" {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/spinup-host/api"
 	"github.com/spinup-host/config"
+	"github.com/spinup-host/internal/backup"
 	"github.com/spinup-host/metrics"
 
 	"github.com/golang-jwt/jwt"
@@ -45,7 +46,8 @@ func apiHandler() http.Handler {
 	mux.HandleFunc("/listcluster", api.ListCluster)
 	mux.HandleFunc("/cluster", api.GetCluster)
 	mux.HandleFunc("/metrics", metrics.HandleMetrics)
-	mux.HandleFunc("/createbackup", api.CreateBackup)
+	mux.HandleFunc("/createbackup", backup.CreateBackup)
+	//mux.HandleFunc("/pghba", backup.UpdatePghba)
 	mux.HandleFunc("/altauth", api.AltAuth)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},
