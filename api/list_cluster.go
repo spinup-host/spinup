@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/spinup-host/config"
+	"github.com/spinup-host/internal/metastore"
+	"github.com/spinup-host/misc"
 
 	_ "modernc.org/sqlite"
 )
@@ -26,57 +27,29 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 	var err error
 	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		log.Printf(err.Error())
+		log.Println("ERROR: validating user: ", err)
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
-	dbPath := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID
-	clusterInfos := ReadClusterInfo(dbPath, config.Cfg.UserID)
-	clusterByte, err := json.Marshal(clusterInfos)
+	path := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID + "/" + config.Cfg.UserID + ".db"
+	db, err := metastore.NewDb(path)
+	if err != nil {
+		misc.ErrorResponse(w, "error accessing sqlite database", 500)
+		return
+	}
+	clustersInfo, err := metastore.ClustersInfo(db)
+	if err != nil {
+		log.Println("ERROR: reading from clusterInfo table: ", err)
+		http.Error(w, "reading from clusterInfo", http.StatusUnauthorized)
+		return
+	}
+	clusterByte, err := json.Marshal(clustersInfo)
 	if err != nil {
 		log.Printf("ERROR: marshalling clusterInfos %v", err)
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
 	w.Write(clusterByte)
-}
-
-type clusterInfo struct {
-	ID        int    `json:"id"`
-	ClusterID string `json:"cluster_id"`
-	Name      string `json:"name"`
-	Port      int    `json:"port"`
-	Username  string `json:"username"`
-}
-
-func ReadClusterInfo(path, dbName string) []clusterInfo {
-	dsn := path + "/" + dbName + ".db"
-	if _, err := os.Stat(dsn); errors.Is(err, fs.ErrNotExist) {
-		log.Printf("INFO: no sqlite database")
-		return nil
-	}
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	rows, err := db.Query("select id, clusterId, name, username, port from clusterInfo")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	var clusterIds []string
-	var clusterInfos []clusterInfo
-	var cluster clusterInfo
-	for rows.Next() {
-		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Port)
-		if err != nil {
-			log.Fatal(err)
-		}
-		clusterInfos = append(clusterInfos, cluster)
-	}
-	fmt.Println(clusterIds)
-	return clusterInfos
 }
 
 func GetCluster(w http.ResponseWriter, r *http.Request) {
@@ -133,8 +106,8 @@ func GetCluster(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getClusterFromDb(clusterId string) (clusterInfo, error) {
-	var ci clusterInfo
+func getClusterFromDb(clusterId string) (config.ClusterInfo, error) {
+	var ci config.ClusterInfo
 	path := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID
 	dsn := path + "/" + config.Cfg.UserID + ".db"
 	if _, err := os.Stat(dsn); errors.Is(err, fs.ErrNotExist) {

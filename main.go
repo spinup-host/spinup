@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"log"
 
 	"github.com/spinup-host/internal/cmd"
@@ -18,6 +17,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-//go:embed templates/*
-var DockerTempl embed.FS
