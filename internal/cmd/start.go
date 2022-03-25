@@ -52,7 +52,7 @@ func apiHandler() http.Handler {
 	mux.HandleFunc("/jwtdecode", api.JWTDecode)
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	mux.HandleFunc("/listcluster", ch.ListCluster)
-	mux.HandleFunc("/cluster", api.GetCluster)
+	mux.HandleFunc("/cluster", ch.GetCluster)
 	mux.HandleFunc("/metrics", mh.ServeHTTP)
 	mux.HandleFunc("/createbackup", backup.CreateBackup)
 	mux.HandleFunc("/altauth", api.AltAuth)
