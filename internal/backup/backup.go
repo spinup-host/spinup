@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/docker/docker/api/types"
@@ -19,11 +20,11 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/robfig/cron/v3"
-	"github.com/spinup-host/config"
-	"github.com/spinup-host/internal/dockerservice"
-	"github.com/spinup-host/internal/metastore"
-	"github.com/spinup-host/internal/postgres"
-	"github.com/spinup-host/misc"
+	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/metastore"
+	"github.com/spinup-host/spinup/internal/postgres"
+	"github.com/spinup-host/spinup/misc"
 )
 
 const PREFIXBACKUPCONTAINER = "spinup-postgres-backup-"
@@ -72,7 +73,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.UserID + ".db"
+	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
 		misc.ErrorResponse(w, "error accessing database", 500)

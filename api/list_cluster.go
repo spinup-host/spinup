@@ -7,16 +7,31 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"os"
+	"path/filepath"
 
-	"github.com/spinup-host/config"
-	"github.com/spinup-host/internal/metastore"
-	"github.com/spinup-host/misc"
+	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/internal/metastore"
 
 	_ "modernc.org/sqlite"
 )
 
-func ListCluster(w http.ResponseWriter, req *http.Request) {
+type ClusterHandler struct {
+	db metastore.Db
+}
+
+func NewClusterHandler() (ClusterHandler, error) {
+	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
+	log.Println("remove path:", path)
+	db, err := metastore.NewDb(path)
+	if err != nil {
+		return ClusterHandler{}, err
+	}
+	return ClusterHandler{
+		db: db,
+	}, nil
+}
+
+func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 	log.Println("listcluster")
 	if (*req).Method != "GET" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
@@ -31,13 +46,7 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
-	path := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID + "/" + config.Cfg.UserID + ".db"
-	db, err := metastore.NewDb(path)
-	if err != nil {
-		misc.ErrorResponse(w, "error accessing sqlite database", 500)
-		return
-	}
-	clustersInfo, err := metastore.ClustersInfo(db)
+	clustersInfo, err := metastore.ClustersInfo(c.db)
 	if err != nil {
 		log.Println("ERROR: reading from clusterInfo table: ", err)
 		http.Error(w, "reading from clusterInfo", http.StatusUnauthorized)
@@ -52,7 +61,7 @@ func ListCluster(w http.ResponseWriter, req *http.Request) {
 	w.Write(clusterByte)
 }
 
-func GetCluster(w http.ResponseWriter, r *http.Request) {
+func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != "GET" {
 		respond(http.StatusMethodNotAllowed, w, map[string]interface{}{
 			"message": "method not allowed",
@@ -80,7 +89,7 @@ func GetCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ci, err := getClusterFromDb(clusterId)
+	ci, err := getClusterFromDb(c.db, clusterId)
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println(err)
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
@@ -106,21 +115,10 @@ func GetCluster(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getClusterFromDb(clusterId string) (config.ClusterInfo, error) {
+func getClusterFromDb(db metastore.Db, clusterId string) (config.ClusterInfo, error) {
 	var ci config.ClusterInfo
-	path := config.Cfg.Common.ProjectDir + "/" + config.Cfg.UserID
-	dsn := path + "/" + config.Cfg.UserID + ".db"
-	if _, err := os.Stat(dsn); errors.Is(err, fs.ErrNotExist) {
-		return ci, err
-	}
-	db, err := sql.Open("sqlite3", dsn)
-	if err != nil {
-		return ci, err
-	}
-	defer db.Close()
-
 	query := `SELECT id, clusterId, name, username, port FROM clusterInfo WHERE clusterId = ? LIMIT 1`
-	err = db.QueryRow(query, clusterId).Scan(
+	err := db.Client.QueryRow(query, clusterId).Scan(
 		&ci.ID,
 		&ci.ClusterID,
 		&ci.Name,

@@ -6,15 +6,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
-	"github.com/spinup-host/internal/dockerservice"
-	"github.com/spinup-host/internal/metastore"
-	"github.com/spinup-host/internal/monitoring"
-	"github.com/spinup-host/internal/postgres"
-	"github.com/spinup-host/misc"
-
-	"github.com/spinup-host/config"
+	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/metastore"
+	"github.com/spinup-host/spinup/internal/monitoring"
+	"github.com/spinup-host/spinup/internal/postgres"
+	"github.com/spinup-host/spinup/misc"
 	_ "modernc.org/sqlite"
 )
 
@@ -98,7 +98,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error getting container id", 500)
 		return
 	}
-	path := config.Cfg.Common.ProjectDir + "/" + s.UserID + "/" + s.UserID + ".db"
+	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
 		misc.ErrorResponse(w, "error accessing sqlite database", 500)

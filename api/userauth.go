@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/spinup-host/config"
+	"github.com/spinup-host/spinup/config"
 )
 
 type user struct {

@@ -6,9 +6,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/spinup-host/internal/dockerservice"
-	"github.com/spinup-host/internal/postgres"
-	"github.com/spinup-host/misc"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/postgres"
+	"github.com/spinup-host/spinup/misc"
 )
 
 // Target represents a postgres host (target) for monitoring
