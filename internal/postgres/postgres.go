@@ -12,8 +12,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
-	"github.com/spinup-host/internal/dockerservice"
-	"github.com/spinup-host/misc"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/misc"
 )
 
 const (

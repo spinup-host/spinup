@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spinup-host/api"
-	"github.com/spinup-host/config"
-	"github.com/spinup-host/internal/backup"
-	"github.com/spinup-host/metrics"
+	"github.com/spinup-host/spinup/api"
+	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/internal/backup"
+	"github.com/spinup-host/spinup/metrics"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/cors"
@@ -34,6 +34,14 @@ var (
 )
 
 func apiHandler() http.Handler {
+	ch, err := api.NewClusterHandler()
+	if err != nil {
+		log.Fatal("unable to create NewClusterHandler")
+	}
+	mh, err := metrics.NewMetricsHandler()
+	if err != nil {
+		log.Fatal("unable to create NewClusterHandler")
+	}
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", api.Hello)
@@ -43,11 +51,10 @@ func apiHandler() http.Handler {
 	mux.HandleFunc("/jwt", api.JWT)
 	mux.HandleFunc("/jwtdecode", api.JWTDecode)
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
-	mux.HandleFunc("/listcluster", api.ListCluster)
+	mux.HandleFunc("/listcluster", ch.ListCluster)
 	mux.HandleFunc("/cluster", api.GetCluster)
-	mux.HandleFunc("/metrics", metrics.HandleMetrics)
+	mux.HandleFunc("/metrics", mh.ServeHTTP)
 	mux.HandleFunc("/createbackup", backup.CreateBackup)
-	//mux.HandleFunc("/pghba", backup.UpdatePghba)
 	mux.HandleFunc("/altauth", api.AltAuth)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},

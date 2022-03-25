@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/spinup-host/internal/cmd"
+	"github.com/spinup-host/spinup/internal/cmd"
 )
 
 var (

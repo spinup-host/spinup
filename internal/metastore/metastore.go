@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/spinup-host/config"
+	"github.com/spinup-host/spinup/config"
 )
 
 type Db struct {

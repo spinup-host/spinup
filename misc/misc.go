@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spinup-host/config"
+	"github.com/spinup-host/spinup/config"
 )
 
 func minMax(array []int) (int, int) {

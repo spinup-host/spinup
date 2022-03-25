@@ -14,7 +14,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/spinup-host/misc"
+	"github.com/spinup-host/spinup/misc"
 )
 
 type Docker struct {
