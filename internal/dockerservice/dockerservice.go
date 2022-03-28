@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -96,17 +98,79 @@ func (d Docker) LastContainerID(ctx context.Context) (string, error) {
 }
 
 func (c *Container) Start(d Docker) (container.ContainerCreateCreatedBody, error) {
+	exists, err := imageExistsLocally(context.Background(), d, c.Config.Image)
+	if err != nil {
+		return container.ContainerCreateCreatedBody{}, fmt.Errorf("error checking whether the image exists locally %w", err)
+	}
+	if !exists {
+		log.Printf("INFO: docker image %s doesn't exist on the host \n", c.Config.Image)
+		if err := pullImageFromDockerRegistry(d, c.Config.Image); err != nil {
+			return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to pull image from docker registry %w", err)
+		}
+	}
 	body, err := d.Cli.ContainerCreate(c.Ctx, &c.Config, &c.HostConfig, &c.NetworkConfig, nil, c.Name)
 	if err != nil {
-		log.Println("error creating container")
-		return container.ContainerCreateCreatedBody{}, err
+		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to create container with image %s", c.Config.Image)
 	}
 	err = d.Cli.ContainerStart(c.Ctx, body.ID, types.ContainerStartOptions{})
 	if err != nil {
-		log.Println("error starting container")
-		return container.ContainerCreateCreatedBody{}, err
+		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to start container for image %s", c.Config.Image)
 	}
 	return body, nil
+}
+
+// imageExistsLocally returns a boolean indicating if an image with the
+// requested name exists in the local docker image store
+func imageExistsLocally(ctx context.Context, d Docker, imageName string) (bool, error) {
+
+	filters := filters.NewArgs()
+	filters.Add("reference", imageName)
+
+	imageListOptions := types.ImageListOptions{
+		Filters: filters,
+	}
+
+	images, err := d.Cli.ImageList(ctx, imageListOptions)
+	if err != nil {
+		return false, err
+	}
+
+	if len(images) > 0 {
+
+		for _, v := range images {
+			_, _, err := d.Cli.ImageInspectWithRaw(ctx, v.ID)
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+
+		}
+		return false, nil
+	}
+
+	return false, nil
+}
+
+func pullImageFromDockerRegistry(d Docker, image string) error {
+	rc, err := d.Cli.ImagePull(context.Background(), image, types.ImagePullOptions{
+		//		Platform: "linux/amd64",
+	})
+	if err != nil {
+		return fmt.Errorf("unable to pull docker image %s %w", image, err)
+	}
+	defer rc.Close()
+	_, err = ioutil.ReadAll(rc)
+	if err != nil {
+		return fmt.Errorf("unable to download docker image %s %w", image, err)
+	}
+	return nil
+}
+
+func removeDockerImage(d Docker, image string) error {
+	_, err := d.Cli.ImageRemove(context.Background(), image, types.ImageRemoveOptions{
+		Force: true,
+	})
+	return err
 }
 
 // ExecCommand executes a given bash command through execConfig and displays the output in stdout and stderr
