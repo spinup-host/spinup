@@ -75,6 +75,8 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	image := s.Architecture + "/" + s.Db.Type + ":" + strconv.Itoa(int(s.Version.Maj))
 	if s.Version.Min > 0 {
 		image += "." + strconv.Itoa(int(s.Version.Min))
+	} else {
+		image += ".0"
 	}
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
