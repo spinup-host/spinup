@@ -88,13 +88,15 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error creating postgres docker service", 500)
 		return
 	}
-	postgresContainerBody, err := postgresContainer.Start(dockerClient)
+	body, err := postgresContainer.Start(dockerClient)
 	if err != nil {
 		log.Printf("ERROR: starting new docker service for %s %v", s.UserID, err)
 		http.Error(w, "Error starting postgres docker service", 500)
 		return
 	}
-	log.Printf("INFO: created service for user %s %s", s.UserID, postgresContainerBody.ID)
+	postgresContainer.ID = body.ID
+	postgresContainer.Warning = body.Warnings
+	log.Printf("INFO: created service for user %s %s", s.UserID, postgresContainer.ID)
 	if err != nil {
 		log.Printf("ERROR: getting container id %v", err)
 		http.Error(w, "Error getting container id", 500)
@@ -107,7 +109,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	insertSql := "insert into clusterInfo(clusterId, name, username, password, port, majVersion, minVersion) values(?, ?, ?, ?, ?, ?, ?)"
-	if err := metastore.InsertServiceIntoMeta(db, insertSql, postgresContainerBody.ID, s.Db.Name, s.Db.Username, s.Db.Password, s.Db.Port, int(s.Version.Maj), int(s.Version.Min)); err != nil {
+	if err := metastore.InsertServiceIntoMeta(db, insertSql, postgresContainer.ID, s.Db.Name, s.Db.Username, s.Db.Password, s.Db.Port, int(s.Version.Maj), int(s.Version.Min)); err != nil {
 		log.Printf("ERROR: executing insert into cluster info table %v", err)
 		misc.ErrorResponse(w, "internal server error", 500)
 		return

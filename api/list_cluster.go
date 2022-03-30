@@ -21,7 +21,6 @@ type ClusterHandler struct {
 
 func NewClusterHandler() (ClusterHandler, error) {
 	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
-	log.Println("remove path:", path)
 	db, err := metastore.NewDb(path)
 	if err != nil {
 		return ClusterHandler{}, err

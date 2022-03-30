@@ -32,7 +32,6 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 		Name:   name,
 	})
 	if err != nil {
-		log.Println("error creating volume::", err)
 		return dockerservice.Container{}, err
 	}
 
@@ -56,7 +55,12 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 		log.Println("error here: ", err)
 		return dockerservice.Container{}, err
 	}
-
+	mounts := []mount.Mount{}
+	mounts = append(mounts, mount.Mount{
+		Type:   mount.TypeVolume,
+		Source: newVolume.Name,
+		Target: "/var/lib/postgresql/data",
+	})
 	hostConfig := container.HostConfig{
 		PortBindings: nat.PortMap{
 			newContainerport: []nat.PortBinding{
@@ -68,20 +72,14 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 		},
 		NetworkMode: "default",
 		AutoRemove:  false,
+		Mounts:      mounts,
 	}
 
-	containerOptions := &types.ContainerStartOptions{}
 	endpointConfig := map[string]*network.EndpointSettings{}
 	networkName := name + "_default"
 	// setting key and value for the map. networkName=$dbname_default (eg: viggy_default)
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	mounts := []mount.Mount{}
-	mounts = append(mounts, mount.Mount{
-		Type:   mount.TypeVolume,
-		Source: newVolume.Name,
-		Target: "/var/lib/postgresql/data",
-	})
 	env := []string{}
 	env = append(env, misc.StringToDockerEnvVal("POSTGRES_USER", postgresUsername))
 	env = append(env, misc.StringToDockerEnvVal("POSTGRES_PASSWORD", postgresPassword))
@@ -94,10 +92,8 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 		},
 		hostConfig,
 		nwConfig,
-		containerOptions,
 	)
-	postgresContainer.HostConfig.Mounts = mounts
-	return *postgresContainer, nil
+	return postgresContainer, nil
 }
 
 func ReloadPostgres(d dockerservice.Docker, execpath, datapath, containerName string) error {

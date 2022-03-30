@@ -250,7 +250,6 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 	// setting key and value for the map. networkName=$dbname_default (eg: viggy_default)
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	containerOptions := &types.ContainerStartOptions{}
 	backupContainer := dockerservice.NewContainer(
 		PREFIXBACKUPCONTAINER+backupData.PgHost,
 		container.Config{
@@ -260,21 +259,20 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 		},
 		container.HostConfig{NetworkMode: "default"},
 		nwConfig,
-		containerOptions,
 	)
 	return func() {
 		// TODO: explicilty ignoring the output of Start. Since i don't know how to use
 		fmt.Println("INFO: starting backup")
 		op, err = backupContainer.Start(dockerClient)
 		if err != nil {
-			fmt.Println("error starting backup container %w", err)
+			fmt.Printf("error starting backup container %v \n", err)
 		}
 		fmt.Println("INFO: created backup container:", op.ID)
 		fmt.Println("INFO: ending backup")
 	}
 }
 
-var tarPath = "modify-pghba.tar"
+const tarPath = "modify-pghba.tar"
 
 func updatePghba(c dockerservice.Container, d dockerservice.Docker, content []byte) error {
 	_, cleanup, err := contentToTar(content)

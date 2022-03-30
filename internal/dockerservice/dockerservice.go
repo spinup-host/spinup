@@ -23,6 +23,7 @@ type Docker struct {
 	Cli *client.Client
 }
 
+// NewDocker returns a Docker struct
 func NewDocker(opts ...client.Opt) (Docker, error) {
 	cli, err := client.NewClientWithOpts(opts...)
 	if err != nil {
@@ -32,38 +33,29 @@ func NewDocker(opts ...client.Opt) (Docker, error) {
 	return Docker{Cli: cli}, nil
 }
 
-type DockerService struct {
-	DockerClient    *client.Client
-	Name            string            `yaml:"name"`
-	NetworkName     string            `yaml:"network_name"`
-	RestartPolicy   string            `yaml:"restart"`
-	Ports           map[int]int       `yaml:"ports"`
-	Environment     map[string]string `yaml:"environment"`
-	Volumes         []string          `yaml:"volumes"`
-	Image           string            `yaml:"image"`
-	RemoveContainer bool              `yaml:"remove_container"`
-}
-
+// Container represents a docker container
 type Container struct {
 	ID      string
 	Name    string
-	Options *types.ContainerStartOptions
+	Options types.ContainerStartOptions
 	Ctx     context.Context
 	// portable docker config
 	Config container.Config
 	// non-portable docker config
 	HostConfig    container.HostConfig
 	NetworkConfig network.NetworkingConfig
+	Warning       []string
 }
 
-func NewContainer(name string, config container.Config, hostConfig container.HostConfig, networkConfig network.NetworkingConfig, options *types.ContainerStartOptions) *Container {
-	return &Container{
+// NewContainer returns a container with provided name, ctx.
+// Rest of the fields default value does makes sense. We should look to remove those since they aren't adding any value
+func NewContainer(name string, config container.Config, hostConfig container.HostConfig, networkConfig network.NetworkingConfig) Container {
+	return Container{
 		Name:          name,
 		Ctx:           context.Background(),
 		Config:        config,
 		HostConfig:    hostConfig,
 		NetworkConfig: networkConfig,
-		Options:       options,
 	}
 }
 
@@ -97,7 +89,7 @@ func (d Docker) LastContainerID(ctx context.Context) (string, error) {
 	return containerID, nil
 }
 
-func (c *Container) Start(d Docker) (container.ContainerCreateCreatedBody, error) {
+func (c Container) Start(d Docker) (container.ContainerCreateCreatedBody, error) {
 	exists, err := imageExistsLocally(context.Background(), d, c.Config.Image)
 	if err != nil {
 		return container.ContainerCreateCreatedBody{}, fmt.Errorf("error checking whether the image exists locally %w", err)
@@ -110,11 +102,11 @@ func (c *Container) Start(d Docker) (container.ContainerCreateCreatedBody, error
 	}
 	body, err := d.Cli.ContainerCreate(c.Ctx, &c.Config, &c.HostConfig, &c.NetworkConfig, nil, c.Name)
 	if err != nil {
-		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to create container with image %s", c.Config.Image)
+		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to create container with image %s %w", c.Config.Image, err)
 	}
-	err = d.Cli.ContainerStart(c.Ctx, body.ID, types.ContainerStartOptions{})
+	err = d.Cli.ContainerStart(c.Ctx, body.ID, c.Options)
 	if err != nil {
-		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to start container for image %s", c.Config.Image)
+		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to start container for image %s %w", c.Config.Image, err)
 	}
 	return body, nil
 }
@@ -201,7 +193,7 @@ func (c Container) ExecCommand(ctx context.Context, d Docker, execConfig types.E
 	return execResponse, nil
 }
 
-func (c *Container) Stop(d Docker, opts types.ContainerStartOptions) {
+func (c Container) Stop(d Docker, opts types.ContainerStartOptions) {
 	timeout := 20 * time.Second
 	d.Cli.ContainerStop(c.Ctx, c.ID, &timeout)
 }
