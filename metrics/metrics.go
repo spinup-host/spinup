@@ -20,7 +20,6 @@ type MetricsHandler struct {
 
 func NewMetricsHandler() (MetricsHandler, error) {
 	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
-	log.Println("remove path:", path)
 	db, err := metastore.NewDb(path)
 	if err != nil {
 		return MetricsHandler{}, err

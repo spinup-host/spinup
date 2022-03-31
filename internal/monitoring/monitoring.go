@@ -3,7 +3,6 @@ package monitoring
 import (
 	"fmt"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/spinup-host/spinup/internal/dockerservice"
@@ -36,7 +35,7 @@ func (t Target) Enable() (container.ContainerCreateCreatedBody, error) {
 	return body, nil
 }
 
-func newPostgresExporterContainer(t Target) (*dockerservice.Container, error) {
+func newPostgresExporterContainer(t Target) (dockerservice.Container, error) {
 	networkName := t.ContainerName + "_default"
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[networkName] = &network.EndpointSettings{}
@@ -55,7 +54,6 @@ func newPostgresExporterContainer(t Target) (*dockerservice.Container, error) {
 		config,
 		container.HostConfig{},
 		nwConfig,
-		&types.ContainerStartOptions{},
 	)
 	return postgresExporterContainer, nil
 }
