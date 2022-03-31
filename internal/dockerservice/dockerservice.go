@@ -203,12 +203,20 @@ func CreateVolume(ctx context.Context, d Docker, opt volume.VolumeCreateBody) (t
 	return d.Cli.VolumeCreate(ctx, opt)
 }
 
+func RemoveVolume(ctx context.Context, d Docker, volumeID string) error {
+	return d.Cli.VolumeRemove(ctx, volumeID, true)
+}
+
 func CreateNetwork(ctx context.Context, d Docker, name string, opt types.NetworkCreate) (types.NetworkCreateResponse, error) {
 	networkResponse, err := d.Cli.NetworkCreate(ctx, name, opt)
 	if err != nil {
 		return types.NetworkCreateResponse{}, err
 	}
 	return networkResponse, nil
+}
+
+func RemoveNetwork(ctx context.Context, d Docker, networkID string) error {
+	return d.Cli.NetworkRemove(ctx, networkID)
 }
 
 func NewDockerClient(ops ...client.Opt) (*client.Client, error) {

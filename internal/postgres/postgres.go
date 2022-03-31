@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/docker/docker/api/types"
@@ -21,7 +20,7 @@ const (
 	PGDATADIR         = "/var/lib/postgresql/data/"
 )
 
-func NewPostgresContainer(image, name, postgresUsername, postgresPassword string) (dockerservice.Container, error) {
+func NewPostgresContainer(image, name, postgresUsername, postgresPassword string) (postgresContainer dockerservice.Container, err error) {
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
@@ -34,12 +33,17 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
-
-	_, err = dockerservice.CreateNetwork(context.Background(), dockerClient, name+"_default", types.NetworkCreate{CheckDuplicate: true})
+	/*WIP: figure out volume removal */
+	resp, err := dockerservice.CreateNetwork(context.Background(), dockerClient, name+"_default", types.NetworkCreate{CheckDuplicate: true})
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
-
+	defer func() {
+		if err != nil {
+			dockerservice.RemoveVolume(context.Background(), dockerClient, newVolume.Name)
+			dockerservice.RemoveNetwork(context.Background(), dockerClient, resp.ID)
+		}
+	}()
 	port, err := misc.Portcheck()
 	if err != nil {
 		return dockerservice.Container{}, err
@@ -52,7 +56,6 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	}
 	newContainerport, err := nat.NewPort("tcp", "5432")
 	if err != nil {
-		log.Println("error here: ", err)
 		return dockerservice.Container{}, err
 	}
 	mounts := []mount.Mount{
@@ -85,7 +88,7 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	env = append(env, misc.StringToDockerEnvVal("POSTGRES_USER", postgresUsername))
 	env = append(env, misc.StringToDockerEnvVal("POSTGRES_PASSWORD", postgresPassword))
 
-	postgresContainer := dockerservice.NewContainer(
+	postgresContainer = dockerservice.NewContainer(
 		containerName,
 		container.Config{
 			Image: image,
