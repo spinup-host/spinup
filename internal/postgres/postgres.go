@@ -55,12 +55,13 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 		log.Println("error here: ", err)
 		return dockerservice.Container{}, err
 	}
-	mounts := []mount.Mount{}
-	mounts = append(mounts, mount.Mount{
+	mounts := []mount.Mount{
+	{
 		Type:   mount.TypeVolume,
 		Source: newVolume.Name,
 		Target: "/var/lib/postgresql/data",
-	})
+	}
+	}
 	hostConfig := container.HostConfig{
 		PortBindings: nat.PortMap{
 			newContainerport: []nat.PortBinding{
