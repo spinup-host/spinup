@@ -82,7 +82,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
 	}
-	postgresContainer, err := postgres.NewPostgresContainer(image, s.Db.Name, s.Db.Username, s.Db.Password)
+	postgresContainer, err := postgres.NewPostgresContainer(image, s.Db.Name, s.Db.Username, s.Db.Password, s.Db.Port)
 	if err != nil {
 		log.Printf("ERROR: creating new docker service for %s %v", s.UserID, err)
 		http.Error(w, "Error creating postgres docker service", 500)

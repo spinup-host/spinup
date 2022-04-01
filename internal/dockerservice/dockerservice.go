@@ -199,7 +199,7 @@ func (c Container) Stop(d Docker, opts types.ContainerStartOptions) {
 }
 
 func CreateVolume(ctx context.Context, d Docker, opt volume.VolumeCreateBody) (types.Volume, error) {
-	log.Println("creating volume: ", opt.Name)
+	log.Println("INFO: volume created successfully ", opt.Name)
 	return d.Cli.VolumeCreate(ctx, opt)
 }
 
@@ -212,6 +212,7 @@ func CreateNetwork(ctx context.Context, d Docker, name string, opt types.Network
 	if err != nil {
 		return types.NetworkCreateResponse{}, err
 	}
+	log.Println("INFO: network created successfully ", name)
 	return networkResponse, nil
 }
 

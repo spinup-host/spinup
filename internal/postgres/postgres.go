@@ -20,7 +20,7 @@ const (
 	PGDATADIR         = "/var/lib/postgresql/data/"
 )
 
-func NewPostgresContainer(image, name, postgresUsername, postgresPassword string) (postgresContainer dockerservice.Container, err error) {
+func NewPostgresContainer(image, name, postgresUsername, postgresPassword string, port int) (postgresContainer dockerservice.Container, err error) {
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
@@ -33,21 +33,26 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
-	/*WIP: figure out volume removal */
-	resp, err := dockerservice.CreateNetwork(context.Background(), dockerClient, name+"_default", types.NetworkCreate{CheckDuplicate: true})
-	if err != nil {
-		return dockerservice.Container{}, err
-	}
+	// defer for cleaning volume removal
 	defer func() {
 		if err != nil {
-			dockerservice.RemoveVolume(context.Background(), dockerClient, newVolume.Name)
-			dockerservice.RemoveNetwork(context.Background(), dockerClient, resp.ID)
+			if errVolRemove := dockerservice.RemoveVolume(context.Background(), dockerClient, newVolume.Name); errVolRemove != nil {
+				err = fmt.Errorf("error removing volume during failed service creation %w", err)
+			}
 		}
 	}()
-	port, err := misc.Portcheck()
+	networkResponse, err := dockerservice.CreateNetwork(context.Background(), dockerClient, name+"_default", types.NetworkCreate{CheckDuplicate: true})
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
+	// defer for cleaning network removal
+	defer func() {
+		if err != nil {
+			if errNetworkRemove := dockerservice.RemoveNetwork(context.Background(), dockerClient, networkResponse.ID); errNetworkRemove != nil {
+				err = fmt.Errorf("error removing network during failed service creation %w", err)
+			}
+		}
+	}()
 	containerName := PREFIXPGCONTAINER + name
 
 	newHostPort, err := nat.NewPort("tcp", strconv.Itoa(port))
