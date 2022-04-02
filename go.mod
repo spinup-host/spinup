@@ -14,8 +14,8 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.8.0
-	github.com/rs/zerolog v1.25.0
 	github.com/spf13/cobra v1.2.1
+	golang.org/x/tools v0.1.5 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	modernc.org/sqlite v1.14.7
 )
