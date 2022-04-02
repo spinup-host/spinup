@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/docker/docker/api/types"
@@ -21,7 +20,7 @@ const (
 	PGDATADIR         = "/var/lib/postgresql/data/"
 )
 
-func NewPostgresContainer(image, name, postgresUsername, postgresPassword string) (dockerservice.Container, error) {
+func NewPostgresContainer(image, name, postgresUsername, postgresPassword string, port int) (postgresContainer dockerservice.Container, err error) {
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
@@ -34,16 +33,26 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
-
-	_, err = dockerservice.CreateNetwork(context.Background(), dockerClient, name+"_default", types.NetworkCreate{CheckDuplicate: true})
+	// defer for cleaning volume removal
+	defer func() {
+		if err != nil {
+			if errVolRemove := dockerservice.RemoveVolume(context.Background(), dockerClient, newVolume.Name); errVolRemove != nil {
+				err = fmt.Errorf("error removing volume during failed service creation %w", err)
+			}
+		}
+	}()
+	networkResponse, err := dockerservice.CreateNetwork(context.Background(), dockerClient, name+"_default", types.NetworkCreate{CheckDuplicate: true})
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
-
-	port, err := misc.Portcheck()
-	if err != nil {
-		return dockerservice.Container{}, err
-	}
+	// defer for cleaning network removal
+	defer func() {
+		if err != nil {
+			if errNetworkRemove := dockerservice.RemoveNetwork(context.Background(), dockerClient, networkResponse.ID); errNetworkRemove != nil {
+				err = fmt.Errorf("error removing network during failed service creation %w", err)
+			}
+		}
+	}()
 	containerName := PREFIXPGCONTAINER + name
 
 	newHostPort, err := nat.NewPort("tcp", strconv.Itoa(port))
@@ -52,7 +61,6 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	}
 	newContainerport, err := nat.NewPort("tcp", "5432")
 	if err != nil {
-		log.Println("error here: ", err)
 		return dockerservice.Container{}, err
 	}
 	mounts := []mount.Mount{
@@ -85,7 +93,7 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	env = append(env, misc.StringToDockerEnvVal("POSTGRES_USER", postgresUsername))
 	env = append(env, misc.StringToDockerEnvVal("POSTGRES_PASSWORD", postgresPassword))
 
-	postgresContainer := dockerservice.NewContainer(
+	postgresContainer = dockerservice.NewContainer(
 		containerName,
 		container.Config{
 			Image: image,
