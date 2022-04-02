@@ -19,6 +19,7 @@ if [ -z "$CLIENT_SECRET" ]; then
 fi
 
 SPINUP_DIR=${SPINUP_DIR:-"${HOME}/.local/spinup"}
+echo "Fetching latest Spinup version..."
 SPINUP_VERSION=$(curl --silent "https://api.github.com/repos/spinup-host/spinup/releases" | jq -r 'first | .tag_name')
 
 OS=$(go env GOOS)
@@ -56,19 +57,26 @@ rm -rf ${SPINUP_DIR}/spinup-dash
 cp -a -R ${SPINUP_TMP_DIR}/spinup-dash/build ${SPINUP_DIR}/spinup-dash
 
 cd ${SPINUP_DIR}
-cat >config.yaml <<-EOF
-common:
-  ports: [
-    5432, 5433, 5434, 5435, 5436, 5437
-  ]
-  db_metric_ports: [
-    55432, 55433, 55434, 55435, 55436, 55437
-  ]
-  architecture: amd64
-  projectDir: ${SPINUP_DIR}
-  client_id: ${CLIENT_ID}
-  client_secret: ${CLIENT_SECRET}
+# preserve existing config file, or create a new one if none exists
+
+CONFIG_FILE="${SPINUP_DIR}/config.yaml"
+if [[ -f "$CONFIG_FILE" ]]; then
+  echo "Found existing configuration file at ${CONFIG_FILE}."
+else
+  cat >config.yaml <<-EOF
+  common:
+    ports: [
+      5432, 5433, 5434, 5435, 5436, 5437
+    ]
+    db_metric_ports: [
+      55432, 55433, 55434, 55435, 55436, 55437
+    ]
+    architecture: amd64
+    projectDir: ${SPINUP_DIR}
+    client_id: ${CLIENT_ID}
+    client_secret: ${CLIENT_SECRET}
 EOF
+fi
 
 openssl genrsa -out ${SPINUP_DIR}/app.rsa 4096
 openssl rsa -in ${SPINUP_DIR}/app.rsa -pubout > ${SPINUP_DIR}/app.rsa.pub
