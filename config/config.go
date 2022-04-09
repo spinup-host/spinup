@@ -53,7 +53,7 @@ type dbCluster struct {
 	Password string
 
 	Memory     string
-	Storage    string
+	CPU        string `json:"cpu"`
 	Monitoring string
 }
 

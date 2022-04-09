@@ -44,7 +44,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = json.Unmarshal(byteArray, &s)
-	log.Printf("%d %d", s.Version.Maj, s.Version.Min)
+	log.Printf("%d %d %s %s", s.Version.Maj, s.Version.Min, s.Db.CPU, s.Db.Memory)
 	if s.UserID == "" && apiKeyHeader != "" {
 		s.UserID = "testuser"
 	}
@@ -82,7 +82,16 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
 	}
-	postgresContainer, err := postgres.NewPostgresContainer(image, s.Db.Name, s.Db.Username, s.Db.Password, s.Db.Port)
+	postgresContainerProp := postgres.ContainerProps{
+		Name:      s.Db.Name,
+		Username:  s.Db.Username,
+		Password:  s.Db.Password,
+		Port:      s.Db.Port,
+		Memory:    s.Db.Memory,
+		CPUShares: s.Db.CPU,
+		Image:     image,
+	}
+	postgresContainer, err := postgres.NewPostgresContainer(postgresContainerProp)
 	if err != nil {
 		log.Printf("ERROR: creating new docker service for %s %v", s.UserID, err)
 		http.Error(w, "Error creating postgres docker service", 500)

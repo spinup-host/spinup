@@ -20,7 +20,17 @@ const (
 	PGDATADIR         = "/var/lib/postgresql/data/"
 )
 
-func NewPostgresContainer(image, name, postgresUsername, postgresPassword string, port int) (postgresContainer dockerservice.Container, err error) {
+type ContainerProps struct {
+	Image     string
+	Name      string
+	Username  string
+	Password  string
+	Port      int
+	Memory    string
+	CPUShares string
+}
+
+func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice.Container, err error) {
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
@@ -28,7 +38,7 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 	newVolume, err := dockerservice.CreateVolume(context.Background(), dockerClient, volume.VolumeCreateBody{
 		Driver: "local",
 		Labels: map[string]string{"purpose": "postgres data"},
-		Name:   name,
+		Name:   props.Name,
 	})
 	if err != nil {
 		return dockerservice.Container{}, err
@@ -41,7 +51,7 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 			}
 		}
 	}()
-	networkResponse, err := dockerservice.CreateNetwork(context.Background(), dockerClient, name+"_default", types.NetworkCreate{CheckDuplicate: true})
+	networkResponse, err := dockerservice.CreateNetwork(context.Background(), dockerClient, props.Name+"_default", types.NetworkCreate{CheckDuplicate: true})
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
@@ -53,9 +63,12 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 			}
 		}
 	}()
-	containerName := PREFIXPGCONTAINER + name
+	containerName := PREFIXPGCONTAINER + props.Name
 
-	newHostPort, err := nat.NewPort("tcp", strconv.Itoa(port))
+	CPUShares, _ := strconv.Atoi(props.CPUShares)
+	Memory, _ := strconv.Atoi(props.Memory)
+
+	newHostPort, err := nat.NewPort("tcp", strconv.Itoa(props.Port))
 	if err != nil {
 		return dockerservice.Container{}, err
 	}
@@ -82,21 +95,25 @@ func NewPostgresContainer(image, name, postgresUsername, postgresPassword string
 		NetworkMode: "default",
 		AutoRemove:  false,
 		Mounts:      mounts,
+		Resources: container.Resources{
+			CPUShares: int64(CPUShares),
+			Memory:    int64(Memory * 1000000),
+		},
 	}
 
 	endpointConfig := map[string]*network.EndpointSettings{}
-	networkName := name + "_default"
+	networkName := props.Name + "_default"
 	// setting key and value for the map. networkName=$dbname_default (eg: viggy_default)
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	env := []string{}
-	env = append(env, misc.StringToDockerEnvVal("POSTGRES_USER", postgresUsername))
-	env = append(env, misc.StringToDockerEnvVal("POSTGRES_PASSWORD", postgresPassword))
+	env = append(env, misc.StringToDockerEnvVal("POSTGRES_USER", props.Username))
+	env = append(env, misc.StringToDockerEnvVal("POSTGRES_PASSWORD", props.Password))
 
 	postgresContainer = dockerservice.NewContainer(
 		containerName,
 		container.Config{
-			Image: image,
+			Image: props.Image,
 			Env:   env,
 		},
 		hostConfig,
