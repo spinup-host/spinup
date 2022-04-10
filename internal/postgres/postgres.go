@@ -26,8 +26,8 @@ type ContainerProps struct {
 	Username  string
 	Password  string
 	Port      int
-	Memory    string
-	CPUShares string
+	Memory    int64
+	CPUShares int64
 }
 
 func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice.Container, err error) {
@@ -64,10 +64,6 @@ func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice
 		}
 	}()
 	containerName := PREFIXPGCONTAINER + props.Name
-
-	CPUShares, _ := strconv.Atoi(props.CPUShares)
-	Memory, _ := strconv.Atoi(props.Memory)
-
 	newHostPort, err := nat.NewPort("tcp", strconv.Itoa(props.Port))
 	if err != nil {
 		return dockerservice.Container{}, err
@@ -96,8 +92,8 @@ func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice
 		AutoRemove:  false,
 		Mounts:      mounts,
 		Resources: container.Resources{
-			CPUShares: int64(CPUShares),
-			Memory:    int64(Memory * 1000000),
+			CPUShares: props.CPUShares,
+			Memory:    props.Memory * 1000000,
 		},
 	}
 

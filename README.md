@@ -80,8 +80,8 @@ curl -X POST http://localhost:4434/createservice \
             "name": "localtest",
             "username": "spinup",
             "password": "spinup",
-            "memory": "6000", //In Megabytes
-            "cpu": "2"
+            "memory": 6000, //In Megabytes
+            "cpu": 2
             },
         "version": {"maj":9,"min":6}
         }'

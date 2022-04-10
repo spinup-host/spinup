@@ -44,7 +44,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = json.Unmarshal(byteArray, &s)
-	log.Printf("%d %d %s %s", s.Version.Maj, s.Version.Min, s.Db.CPU, s.Db.Memory)
+	log.Printf("%d %d %d %d", s.Version.Maj, s.Version.Min, s.Db.CPU, s.Db.Memory)
 	if s.UserID == "" && apiKeyHeader != "" {
 		s.UserID = "testuser"
 	}
