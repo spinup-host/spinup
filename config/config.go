@@ -52,8 +52,8 @@ type dbCluster struct {
 	Username string
 	Password string
 
-	Memory     string
-	Storage    string
+	Memory     int64
+	CPU        int64
 	Monitoring string
 }
 
