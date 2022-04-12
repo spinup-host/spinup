@@ -6,8 +6,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use: "spinup",
-	Short: "Spinup CLI",
+	Use:              "spinup",
+	Short:            "Spinup CLI",
 	TraverseChildren: true,
 }
 

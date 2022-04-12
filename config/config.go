@@ -20,7 +20,8 @@ type Configuration struct {
 		ClientSecret string `yaml:"client_secret"`
 		ApiKey       string `yaml:"api_key"`
 		LogDir       string `yaml:"log_dir"`
-		LogFile       string `yaml:"log_file"`
+		LogFile      string `yaml:"log_file"`
+		Monitoring   bool   `yaml:"monitoring"`
 	} `yaml:"common"`
 	VerifyKey *rsa.PublicKey
 	SignKey   *rsa.PrivateKey
@@ -146,7 +147,7 @@ func JWTToString(tokenString string) (string, error) {
 	return claims.Text, nil
 }
 
-// Create a struct that will be encoded to a JWT.
+// Claims is a struct that will be encoded to a JWT.
 // We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
 type Claims struct {
 	Text string `json:"text"`

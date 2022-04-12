@@ -38,7 +38,6 @@ type Container struct {
 	ID      string
 	Name    string
 	Options types.ContainerStartOptions
-	Ctx     context.Context
 	// portable docker config
 	Config container.Config
 	// non-portable docker config
@@ -52,29 +51,31 @@ type Container struct {
 func NewContainer(name string, config container.Config, hostConfig container.HostConfig, networkConfig network.NetworkingConfig) Container {
 	return Container{
 		Name:          name,
-		Ctx:           context.Background(),
 		Config:        config,
 		HostConfig:    hostConfig,
 		NetworkConfig: networkConfig,
 	}
 }
 
-func (d Docker) GetContainer(ctx context.Context, name string) (Container, error) {
-	c := Container{}
-	containers, err := d.Cli.ContainerList(ctx, types.ContainerListOptions{})
+func (d Docker) GetContainer(ctx context.Context, name string) (*Container, error) {
+	listFilters := filters.NewArgs()
+	listFilters.Add("name", name)
+	containers, err := d.Cli.ContainerList(ctx, types.ContainerListOptions{Filters: listFilters})
 	if err != nil {
-		return Container{}, fmt.Errorf("error listing containers %w", err)
+		return &Container{}, fmt.Errorf("error listing containers %w", err)
 	}
-	for _, container := range containers {
+	for _, match := range containers {
 		// TODO: name of the container has prefixed with "/"
 		// I have hardcoded here; perhaps there is a better way to handle this
-		if misc.SliceContainsString(container.Names, "/"+name) {
-			c.ID = container.ID
-			c.Config.Image = container.Image
-			break
+		if misc.SliceContainsString(match.Names, "/"+name) {
+			c := &Container{
+				ID:   match.ID,
+				Name: name,
+			}
+			return c, nil
 		}
 	}
-	return c, nil
+	return nil, nil
 }
 
 func (d Docker) LastContainerID(ctx context.Context) (string, error) {
@@ -89,25 +90,28 @@ func (d Docker) LastContainerID(ctx context.Context) (string, error) {
 	return containerID, nil
 }
 
-func (c Container) Start(d Docker) (container.ContainerCreateCreatedBody, error) {
+func (c *Container) Start(ctx context.Context, d Docker) (container.ContainerCreateCreatedBody, error) {
 	exists, err := imageExistsLocally(context.Background(), d, c.Config.Image)
 	if err != nil {
 		return container.ContainerCreateCreatedBody{}, fmt.Errorf("error checking whether the image exists locally %w", err)
 	}
 	if !exists {
-		log.Printf("INFO: docker image %s doesn't exist on the host \n", c.Config.Image)
+		log.Printf("INFO: docker image %s doesn't exist on the host. Will attempt to pull in the background \n", c.Config.Image)
 		if err := pullImageFromDockerRegistry(d, c.Config.Image); err != nil {
 			return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to pull image from docker registry %w", err)
 		}
 	}
-	body, err := d.Cli.ContainerCreate(c.Ctx, &c.Config, &c.HostConfig, &c.NetworkConfig, nil, c.Name)
+	body, err := d.Cli.ContainerCreate(ctx, &c.Config, &c.HostConfig, &c.NetworkConfig, nil, c.Name)
 	if err != nil {
 		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to create container with image %s %w", c.Config.Image, err)
 	}
-	err = d.Cli.ContainerStart(c.Ctx, body.ID, c.Options)
+	err = d.Cli.ContainerStart(ctx, body.ID, c.Options)
 	if err != nil {
 		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to start container for image %s %w", c.Config.Image, err)
 	}
+
+	c.ID = body.ID
+	log.Printf("started %s container with ID: %s", c.Name, c.ID)
 	return body, nil
 }
 
@@ -115,11 +119,11 @@ func (c Container) Start(d Docker) (container.ContainerCreateCreatedBody, error)
 // requested name exists in the local docker image store
 func imageExistsLocally(ctx context.Context, d Docker, imageName string) (bool, error) {
 
-	filters := filters.NewArgs()
-	filters.Add("reference", imageName)
+	listFilters := filters.NewArgs()
+	listFilters.Add("reference", imageName)
 
 	imageListOptions := types.ImageListOptions{
-		Filters: filters,
+		Filters: listFilters,
 	}
 
 	images, err := d.Cli.ImageList(ctx, imageListOptions)
@@ -193,9 +197,15 @@ func (c Container) ExecCommand(ctx context.Context, d Docker, execConfig types.E
 	return execResponse, nil
 }
 
-func (c Container) Stop(d Docker, opts types.ContainerStartOptions) {
+func (c Container) Stop(ctx context.Context, d Docker, opts types.ContainerStartOptions) error {
 	timeout := 20 * time.Second
-	d.Cli.ContainerStop(c.Ctx, c.ID, &timeout)
+	log.Println("stopping ", c.ID)
+	return d.Cli.ContainerStop(ctx, c.ID, &timeout)
+}
+
+func (c Container) Remove(ctx context.Context, d Docker) error {
+	log.Println("stopping ", c.ID)
+	return d.Cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
 }
 
 func CreateVolume(ctx context.Context, d Docker, opt volume.VolumeCreateBody) (types.Volume, error) {

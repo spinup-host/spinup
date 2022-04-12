@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/monitor"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -36,10 +38,12 @@ var (
 
 	apiPort = ":4434"
 	uiPort  = ":3000"
+
+	monitorRuntime *monitor.Runtime
 )
 
 func apiHandler() http.Handler {
-	ch, err := api.NewClusterHandler()
+	ch, err := api.NewClusterHandler(monitorRuntime)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
@@ -50,7 +54,7 @@ func apiHandler() http.Handler {
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", api.Hello)
-	mux.HandleFunc("/createservice", api.CreateService)
+	mux.HandleFunc("/createservice", ch.CreateService)
 	mux.HandleFunc("/githubAuth", api.GithubAuth)
 	mux.HandleFunc("/logs", api.Logs)
 	mux.HandleFunc("/jwt", api.JWT)
@@ -91,6 +95,20 @@ func startCmd() *cobra.Command {
 			}
 			log.Println("INFO: Initial Validations successful")
 			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
+
+			if config.Cfg.Common.Monitoring {
+				dockerClient, err := dockerservice.NewDocker()
+				if err != nil {
+					log.Printf("error creating client %v", err)
+					return
+				}
+				monitorRuntime = monitor.NewRuntime(dockerClient)
+				if err := monitorRuntime.BootstrapServices(); err != nil {
+					log.Println(err)
+				} else {
+					log.Println("started monitoring services")
+				}
+			}
 
 			apiListener, err := net.Listen("tcp", apiPort)
 			if err != nil {
