@@ -17,11 +17,14 @@ import (
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/backup"
 	"github.com/spinup-host/spinup/metrics"
+	"github.com/spinup-host/spinup/utils"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/cors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -76,15 +79,16 @@ func startCmd() *cobra.Command {
 		Use:   "start",
 		Short: "start the spinup API and frontend servers",
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Println(fmt.Sprintf("INFO: using config file: %s", cfgFile))
+			utils.InitializeLogger("", "")
+			utils.Logger.Info(fmt.Sprintf("Using config file: %s", cfgFile))
 			if err := validateConfig(cfgFile); err != nil {
-				log.Fatalf("FATAL: validating config: %v", err)
+				utils.Logger.Fatal("Validating Config ", zap.Error(err))
 			}
-			log.Println("INFO: initial validations successful")
+			utils.Logger.Info("Initial Validations successful")
 
 			apiListener, err := net.Listen("tcp", apiPort)
 			if err != nil {
-				log.Fatalf("FATAL: starting API server %v", err)
+				utils.Logger.Fatal("Starting API server", zap.Error(err))
 			}
 			apiServer := &http.Server{
 				Handler: apiHandler(),
@@ -93,21 +97,21 @@ func startCmd() *cobra.Command {
 
 			stopCh := make(chan os.Signal, 1)
 			go func() {
-				log.Println(fmt.Sprintf("INFO: starting Spinup API on port %s", apiPort))
+				utils.Logger.Info("starting Spinup API ", zap.String("port", apiPort))
 				apiServer.Serve(apiListener)
 			}()
 
 			if apiOnly == false {
 				uiListener, err := net.Listen("tcp", uiPort)
 				if err != nil {
-					log.Fatalf("FATAL: starting UI server %v", err)
+					utils.Logger.Fatal("starting UI server", zap.Error(err))
 				}
 
 				uiServer := &http.Server{
 					Handler: uiHandler(),
 				}
 				go func() {
-					log.Println(fmt.Sprintf("INFO: starting Spinup UI on port %s", uiPort))
+					utils.Logger.Info("sstarting Spinup UI   ", zap.String("port", uiPort))
 					uiServer.Serve(uiListener)
 				}()
 				defer stop(uiServer)
@@ -115,7 +119,9 @@ func startCmd() *cobra.Command {
 
 			signal.Notify(stopCh, syscall.SIGINT, syscall.SIGTERM)
 			log.Println(fmt.Sprint(<-stopCh))
-			log.Println("stopping spinup apiServer")
+			utils.Logger.Info(fmt.Sprint(<-stopCh))
+			utils.Logger.Info("stopping spinup apiServer")
+
 		},
 	}
 
