@@ -3,6 +3,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
+	"log"
 	"fmt"
 )
 var Logger *zap.Logger
@@ -12,15 +13,21 @@ at the startup of the server.
 */
 func InitializeLogger(logDir string, fileName string) {
 	loggingFilePath := ""
+	
 	config := zap.NewProductionEncoderConfig()
 	if logDir == "" {
 		homeDir, _ := os.UserHomeDir();
 		loggingFilePath = homeDir
+	} else {
+		loggingFilePath = logDir
 	}
 	if fileName == "" {
 		loggingFilePath += "/Spinup.log"
+	} else {
+		loggingFilePath += "/" + fileName
 	}
-	fmt.Printf("Spinup Logging file -> %s\n", loggingFilePath)
+
+	log.Println(fmt.Sprintf("Spinup Logging file -> %s\n", loggingFilePath))
     config.EncodeTime = zapcore.ISO8601TimeEncoder
 	fileEncoder := zapcore.NewJSONEncoder(config)
 	consoleEncoder := zapcore.NewConsoleEncoder(config)

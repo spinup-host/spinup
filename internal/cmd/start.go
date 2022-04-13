@@ -39,11 +39,11 @@ var (
 func apiHandler() http.Handler {
 	ch, err := api.NewClusterHandler()
 	if err != nil {
-		log.Fatal("unable to create NewClusterHandler")
+		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
 	mh, err := metrics.NewMetricsHandler()
 	if err != nil {
-		log.Fatal("unable to create NewClusterHandler")
+		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
@@ -80,11 +80,12 @@ func startCmd() *cobra.Command {
 		Short: "start the spinup API and frontend servers",
 		Run: func(cmd *cobra.Command, args []string) {
 			utils.InitializeLogger("", "")
-			utils.Logger.Info(fmt.Sprintf("Using config file: %s", cfgFile))
+			log.Println(fmt.Sprintf("INFO: Using config file: %s", cfgFile))
 			if err := validateConfig(cfgFile); err != nil {
-				utils.Logger.Fatal("Validating Config ", zap.Error(err))
+				log.Fatal("FATAL : Validating Config %v", err)
 			}
-			utils.Logger.Info("Initial Validations successful")
+			log.Println("INFO: Initial Validations successful")
+			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
 
 			apiListener, err := net.Listen("tcp", apiPort)
 			if err != nil {
@@ -127,7 +128,7 @@ func startCmd() *cobra.Command {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalf("FATAL: obtaining home directory: %v", err)
+		utils.Logger.Fatal("Fobtaining home directory: ", zap.Error(err))
 	}
 	sc.Flags().StringVar(&cfgFile, "config",
 		fmt.Sprintf("%s/.local/spinup/config.yaml", home), "Path to spinup configuration")
@@ -175,6 +176,6 @@ func stop(server *http.Server) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Can't stop Spinup API correctly: %v", err)
+		utils.Logger.Info("Can't stop Spinup API correctly:", zap.Error(err))
 	}
 }
