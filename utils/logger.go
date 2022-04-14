@@ -13,7 +13,7 @@ at the startup of the server.
 */
 func InitializeLogger(logDir string, fileName string) {
 	loggingFilePath := ""
-	
+
 	config := zap.NewProductionEncoderConfig()
 	if logDir == "" {
 		homeDir, _ := os.UserHomeDir();
