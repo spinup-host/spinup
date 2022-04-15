@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"context"
+
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use: "spinup",
-	Short: "Spinup CLI",
+	Use:              "spinup",
+	Short:            "Spinup CLI",
 	TraverseChildren: true,
 }
 

@@ -23,17 +23,17 @@ type Docker struct {
 	Cli *client.Client
 }
 
-// NewDocker returns a Docker struct
+// NewDocker returns a Docker struct.
 func NewDocker(opts ...client.Opt) (Docker, error) {
 	cli, err := client.NewClientWithOpts(opts...)
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
 	}
-	//TODO: Check. Does this initialize and assign
+	// TODO: Check. Does this initialize and assign
 	return Docker{Cli: cli}, nil
 }
 
-// Container represents a docker container
+// Container represents a docker container.
 type Container struct {
 	ID      string
 	Name    string
@@ -48,7 +48,7 @@ type Container struct {
 }
 
 // NewContainer returns a container with provided name, ctx.
-// Rest of the fields default value does makes sense. We should look to remove those since they aren't adding any value
+// Rest of the fields default value does makes sense. We should look to remove those since they aren't adding any value.
 func NewContainer(name string, config container.Config, hostConfig container.HostConfig, networkConfig network.NetworkingConfig) Container {
 	return Container{
 		Name:          name,
@@ -112,9 +112,8 @@ func (c Container) Start(d Docker) (container.ContainerCreateCreatedBody, error)
 }
 
 // imageExistsLocally returns a boolean indicating if an image with the
-// requested name exists in the local docker image store
+// requested name exists in the local docker image store.
 func imageExistsLocally(ctx context.Context, d Docker, imageName string) (bool, error) {
-
 	filters := filters.NewArgs()
 	filters.Add("reference", imageName)
 
@@ -128,14 +127,12 @@ func imageExistsLocally(ctx context.Context, d Docker, imageName string) (bool, 
 	}
 
 	if len(images) > 0 {
-
 		for _, v := range images {
 			_, _, err := d.Cli.ImageInspectWithRaw(ctx, v.ID)
 			if err != nil {
 				return false, err
 			}
 			return true, nil
-
 		}
 		return false, nil
 	}
@@ -166,7 +163,7 @@ func removeDockerImage(d Docker, image string) error {
 }
 
 // ExecCommand executes a given bash command through execConfig and displays the output in stdout and stderr
-// This function doesn't return an error for the failure of the command itself
+// This function doesn't return an error for the failure of the command itself.
 func (c Container) ExecCommand(ctx context.Context, d Docker, execConfig types.ExecConfig) (types.IDResponse, error) {
 	if c.ID == "" {
 		return types.IDResponse{}, errors.New("container id is empty")

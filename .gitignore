@@ -6,3 +6,5 @@ app.rsa.pub
 spinup-host
 config.yaml
 testuser
+bin
+tmp

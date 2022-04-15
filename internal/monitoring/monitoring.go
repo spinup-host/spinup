@@ -10,7 +10,7 @@ import (
 	"github.com/spinup-host/spinup/misc"
 )
 
-// Target represents a postgres host (target) for monitoring
+// Target represents a postgres host (target) for monitoring.
 type Target struct {
 	DockerNetwork string
 	ContainerName string

@@ -48,12 +48,10 @@ func (m *MetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	promhttp.Handler().ServeHTTP(w, r)
 }
 
-var (
-	containersCreated = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "spinup_containers_created_gauge",
-		Help: "The total number of containers created by spinup",
-	})
-)
+var containersCreated = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "spinup_containers_created_gauge",
+	Help: "The total number of containers created by spinup",
+})
 
 func recordMetrics(db metastore.Db, errCh chan error) {
 	go func() {

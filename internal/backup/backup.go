@@ -224,7 +224,7 @@ func backupDataValidation(s *config.Service) error {
 	return nil
 }
 
-// TriggerBackup returns a closure which is being invoked by the cron
+// TriggerBackup returns a closure which is being invoked by the cron.
 func TriggerBackup(networkName string, backupData BackupData) func() {
 	var err error
 	dockerClient, err := dockerservice.NewDocker()
@@ -261,7 +261,7 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 		nwConfig,
 	)
 	return func() {
-		// TODO: explicilty ignoring the output of Start. Since i don't know how to use
+		// TODO: explicitly ignoring the output of Start. Since i don't know how to use
 		fmt.Println("INFO: starting backup")
 		op, err = backupContainer.Start(dockerClient)
 		if err != nil {
@@ -316,7 +316,7 @@ func contentToTar(content []byte) (io.Writer, func(), error) {
 
 	hdr := &tar.Header{
 		Name: "modify-pghba",
-		Mode: 0655,
+		Mode: 0o655,
 		Size: int64(len(content)),
 	}
 	if err := tw.WriteHeader(hdr); err != nil {

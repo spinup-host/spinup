@@ -32,7 +32,7 @@ type Service struct {
 	UserID   string
 	// one of arm64v8 or arm32v7 or amd64
 	Architecture string
-	//Port         uint
+
 	Db            dbCluster
 	DockerNetwork string
 	Version       version
@@ -150,7 +150,7 @@ func JWTToString(tokenString string) (string, error) {
 }
 
 // Create a struct that will be encoded to a JWT.
-// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
+// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time.
 type Claims struct {
 	Text string `json:"text"`
 	jwt.StandardClaims
