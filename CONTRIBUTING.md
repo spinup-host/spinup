@@ -4,13 +4,13 @@ Thanks for your interest in improving the project! This document provides a step
 
 ## Communications
 
-We have a slack, join using the invite [link](https://join.slack.com/t/spinuphost/shared_invite/zt-vpe8u3rm-I3UTvHqzNBq0JHWjEQ1Y9Q).
+We have a slack, join using the invite [link](https://join.slack.com/t/spinuphost/shared_invite/zt-17mve4j4g-kf13SuKvGGnMSyeQDCoE9Q).
 
 ## Submitting a PR
 
 If you have a specific idea of a fix or update, follow these steps below to submit a PR:
 
-- [Contributing to Spiup Host](#contributing-to-spinup-host)
+- [Contributing to Spinup Host](#contributing-to-spinup-host)
   - [Communications](#communications)
   - [Submitting a PR](#submitting-a-pr)
     - [Step 1: Make the change](#step-1-make-the-change)
