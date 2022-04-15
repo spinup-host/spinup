@@ -4,7 +4,7 @@ Thanks for your interest in improving the project! This document provides a step
 
 ## Communications
 
-We have a slack, join using the invite [link](https://join.slack.com/t/spinuphost/shared_invite/zt-173sd0w42-hmyMzkEVtrHgquN2FI4OoA).
+We have a slack, join using the invite [link](https://join.slack.com/t/spinuphost/shared_invite/zt-17mve4j4g-kf13SuKvGGnMSyeQDCoE9Q).
 
 ## Submitting a PR
 
