@@ -1,4 +1,4 @@
-# Config file for [Air](https://github.com/cosmtrek/air) in TOML format
+# Config file for SpinUp in TOML format
 
 # Working directory
 # . or absolute path, please note that the directories following must be under root.
@@ -37,7 +37,7 @@ send_interrupt = false
 # Delay after sending Interrupt signal
 kill_delay = 500 # ms
 # Add additional arguments when running binary (bin/full_bin). Will run './tmp/main hello world'.
-args_bin = ["--api-only"]
+args_bin = ["start"]
 
 [log]
 # Show log time

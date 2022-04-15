@@ -145,7 +145,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	execPath := "/usr/lib/postgresql/" + strconv.Itoa(ci.MajVersion) + "/bin/"
 	if err = postgres.ReloadPostgres(dockerClient, execPath, postgres.PGDATADIR, pgHost); err != nil {
-		misc.ErrorResponse(w, "internal server error", 500)
+		misc.ErrorResponse(w, " internal server error", 500)
 		return
 	}
 	c := cron.New()
