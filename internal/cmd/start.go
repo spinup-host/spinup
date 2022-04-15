@@ -17,11 +17,14 @@ import (
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/backup"
 	"github.com/spinup-host/spinup/metrics"
+	"github.com/spinup-host/spinup/utils"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/cors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -36,11 +39,11 @@ var (
 func apiHandler() http.Handler {
 	ch, err := api.NewClusterHandler()
 	if err != nil {
-		log.Fatal("unable to create NewClusterHandler")
+		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
 	mh, err := metrics.NewMetricsHandler()
 	if err != nil {
-		log.Fatal("unable to create NewClusterHandler")
+		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
@@ -76,15 +79,17 @@ func startCmd() *cobra.Command {
 		Use:   "start",
 		Short: "start the spinup API and frontend servers",
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Println(fmt.Sprintf("INFO: using config file: %s", cfgFile))
+			utils.InitializeLogger("", "")
+			log.Println(fmt.Sprintf("INFO: Using config file: %s", cfgFile))
 			if err := validateConfig(cfgFile); err != nil {
-				log.Fatalf("FATAL: validating config: %v", err)
+				log.Fatal("FATAL : Validating Config %v", err)
 			}
-			log.Println("INFO: initial validations successful")
+			log.Println("INFO: Initial Validations successful")
+			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
 
 			apiListener, err := net.Listen("tcp", apiPort)
 			if err != nil {
-				log.Fatalf("FATAL: starting API server %v", err)
+				utils.Logger.Fatal("Starting API server", zap.Error(err))
 			}
 			apiServer := &http.Server{
 				Handler: apiHandler(),
@@ -93,21 +98,21 @@ func startCmd() *cobra.Command {
 
 			stopCh := make(chan os.Signal, 1)
 			go func() {
-				log.Println(fmt.Sprintf("INFO: starting Spinup API on port %s", apiPort))
+				utils.Logger.Info("starting Spinup API ", zap.String("port", apiPort))
 				apiServer.Serve(apiListener)
 			}()
 
 			if apiOnly == false {
 				uiListener, err := net.Listen("tcp", uiPort)
 				if err != nil {
-					log.Fatalf("FATAL: starting UI server %v", err)
+					utils.Logger.Fatal("starting UI server", zap.Error(err))
 				}
 
 				uiServer := &http.Server{
 					Handler: uiHandler(),
 				}
 				go func() {
-					log.Println(fmt.Sprintf("INFO: starting Spinup UI on port %s", uiPort))
+					utils.Logger.Info("sstarting Spinup UI   ", zap.String("port", uiPort))
 					uiServer.Serve(uiListener)
 				}()
 				defer stop(uiServer)
@@ -115,13 +120,15 @@ func startCmd() *cobra.Command {
 
 			signal.Notify(stopCh, syscall.SIGINT, syscall.SIGTERM)
 			log.Println(fmt.Sprint(<-stopCh))
-			log.Println("stopping spinup apiServer")
+			utils.Logger.Info(fmt.Sprint(<-stopCh))
+			utils.Logger.Info("stopping spinup apiServer")
+
 		},
 	}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalf("FATAL: obtaining home directory: %v", err)
+		utils.Logger.Fatal("Fobtaining home directory: ", zap.Error(err))
 	}
 	sc.Flags().StringVar(&cfgFile, "config",
 		fmt.Sprintf("%s/.local/spinup/config.yaml", home), "Path to spinup configuration")
@@ -169,6 +176,6 @@ func stop(server *http.Server) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Can't stop Spinup API correctly: %v", err)
+		utils.Logger.Info("Can't stop Spinup API correctly:", zap.Error(err))
 	}
 }

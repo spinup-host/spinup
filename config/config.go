@@ -19,6 +19,8 @@ type Configuration struct {
 		ClientID     string `yaml:"client_id"`
 		ClientSecret string `yaml:"client_secret"`
 		ApiKey       string `yaml:"api_key"`
+		LogDir       string `yaml:"log_dir"`
+		LogFile       string `yaml:"log_file"`
 	} `yaml:"common"`
 	VerifyKey *rsa.PublicKey
 	SignKey   *rsa.PrivateKey

@@ -20,11 +20,13 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/postgres"
 	"github.com/spinup-host/spinup/misc"
+	"github.com/spinup-host/spinup/utils"
 )
 
 const PREFIXBACKUPCONTAINER = "spinup-postgres-backup-"
@@ -53,13 +55,13 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	var s config.Service
 	byteArray, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Printf("error %v", err)
+		utils.Logger.Error("Error Occured", zap.Error(err))
 		misc.ErrorResponse(w, "error reading from request body", 500)
 		return
 	}
 	err = json.Unmarshal(byteArray, &s)
 	if err != nil {
-		fmt.Printf("error %v", err)
+		utils.Logger.Error("Error Occured", zap.Error(err))
 		misc.ErrorResponse(w, "error reading from readall body", 500)
 		return
 	}
@@ -108,28 +110,29 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		mon,
 		dowInt,
 	); err != nil {
-		log.Printf("ERROR: executing insert into backup table %v", err)
+		utils.Logger.Error("Error executing insert into backup table", zap.Error(err))
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
 	pgHost := postgres.PREFIXPGCONTAINER + s.Db.Name
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
-		fmt.Printf("error creating client %v", err)
+		utils.Logger.Error("Error creating client", zap.Error(err))
+		
 	}
 	pgContainer, err := dockerClient.GetContainer(context.Background(), pgHost)
 	if err != nil {
-		log.Printf("error: getting container for container name %s %v", pgHost, err)
+		utils.Logger.Error("Error getting container for container name ", zap.String("containerName", pgHost), zap.Error(err))
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
 	scriptContent, err := f.ReadFile("modify-pghba.sh")
 	if err != nil {
-		log.Printf("error: reading modify-pghba.sh file %v", err)
+		utils.Logger.Error("reading modify-pghba.sh file ", zap.Error(err))
 	}
 	err = updatePghba(pgContainer, dockerClient, scriptContent)
 	if err != nil {
-		log.Printf("error: updating pghba %v", err)
+		utils.Logger.Error("updating pghba", zap.Error(err))
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
@@ -175,7 +178,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	} else {
 		spec += " " + "*"
 	}
-	log.Println("INFO: scheduling backup at:", spec)
+	utils.Logger.Info("Scheduling backup at ", zap.String("spec", spec))
 
 	networkName := s.Db.Name + "_default"
 	backupData := BackupData{
@@ -189,7 +192,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = c.AddFunc(spec, TriggerBackup(networkName, backupData))
 	if err != nil {
-		log.Printf("error: scheduling database backup")
+		utils.Logger.Error("scheduling database backup", zap.Error(err))
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
@@ -229,7 +232,7 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 	var err error
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
-		fmt.Printf("error creating client %v", err)
+		utils.Logger.Error("Error creating client", zap.Error(err))
 	}
 	var op container.ContainerCreateCreatedBody
 	env := []string{}
@@ -261,14 +264,14 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 		nwConfig,
 	)
 	return func() {
-		// TODO: explicitly ignoring the output of Start. Since i don't know how to use
-		fmt.Println("INFO: starting backup")
+		// TODO: explicilty ignoring the output of Start. Since i don't know how to use
+		utils.Logger.Info("starting backup")
 		op, err = backupContainer.Start(dockerClient)
 		if err != nil {
-			fmt.Printf("error starting backup container %v \n", err)
+			utils.Logger.Error("starting backup container", zap.Error(err))
 		}
-		fmt.Println("INFO: created backup container:", op.ID)
-		fmt.Println("INFO: ending backup")
+		utils.Logger.Info("created backup container:", zap.String("containerId", op.ID))
+		utils.Logger.Info("Ending backup")
 	}
 }
 
