@@ -2,7 +2,6 @@ package dockerservice
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +15,8 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/pkg/errors"
+
 	"github.com/spinup-host/spinup/misc"
 )
 
@@ -57,6 +58,8 @@ func NewContainer(name string, config container.Config, hostConfig container.Hos
 	}
 }
 
+// GetContainer returns a docker container with the provided name (if any exists).
+// if no match exists, it returns a nil container and a nil error.
 func (d Docker) GetContainer(ctx context.Context, name string) (*Container, error) {
 	listFilters := filters.NewArgs()
 	listFilters.Add("name", name)
@@ -68,9 +71,18 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 		// TODO: name of the container has prefixed with "/"
 		// I have hardcoded here; perhaps there is a better way to handle this
 		if misc.SliceContainsString(match.Names, "/"+name) {
+			data, err := d.Cli.ContainerInspect(ctx, match.ID)
+			if err != nil {
+				return nil, errors.Wrapf(err, "getting data for container %s", match.ID)
+			}
+
 			c := &Container{
 				ID:   match.ID,
 				Name: name,
+				Config: *data.Config,
+				NetworkConfig: network.NetworkingConfig{
+					EndpointsConfig: data.NetworkSettings.Networks,
+				},
 			}
 			return c, nil
 		}
@@ -78,39 +90,42 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 	return nil, nil
 }
 
-func (d Docker) LastContainerID(ctx context.Context) (string, error) {
-	containers, err := d.Cli.ContainerList(ctx, types.ContainerListOptions{Latest: true})
-	if err != nil {
-		return "", err
-	}
-	var containerID string
-	for _, container := range containers {
-		containerID = container.ID
-	}
-	return containerID, nil
-}
-
+// Start starts a docker container. If the base image doesn't exist locally, we attempt to pull it from
+// the docker registry.
 func (c *Container) Start(ctx context.Context, d Docker) (container.ContainerCreateCreatedBody, error) {
+	body := container.ContainerCreateCreatedBody{}
+
 	exists, err := imageExistsLocally(context.Background(), d, c.Config.Image)
 	if err != nil {
-		return container.ContainerCreateCreatedBody{}, fmt.Errorf("error checking whether the image exists locally %w", err)
+		return body, errors.Wrap(err, "error checking whether the image exists locally")
 	}
 	if !exists {
 		log.Printf("INFO: docker image %s doesn't exist on the host. Will attempt to pull in the background \n", c.Config.Image)
 		if err := pullImageFromDockerRegistry(d, c.Config.Image); err != nil {
-			return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to pull image from docker registry %w", err)
+			return body, errors.Wrap(err, "pulling image from docker registry")
 		}
 	}
-	body, err := d.Cli.ContainerCreate(ctx, &c.Config, &c.HostConfig, &c.NetworkConfig, nil, c.Name)
+
+	body, err = d.Cli.ContainerCreate(ctx, &c.Config, &c.HostConfig, &c.NetworkConfig, nil, c.Name)
 	if err != nil {
-		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to create container with image %s %w", c.Config.Image, err)
+		return body, errors.Wrapf(err, "unable to create container with image %s", c.Config.Image)
 	}
 	err = d.Cli.ContainerStart(ctx, body.ID, c.Options)
 	if err != nil {
-		return container.ContainerCreateCreatedBody{}, fmt.Errorf("unable to start container for image %s %w", c.Config.Image, err)
+		return body, errors.Wrapf(err, "unable to start container for image %s", c.Config.Image)
+	}
+
+	data, err := d.Cli.ContainerInspect(ctx, body.ID)
+	if err != nil {
+		return body, errors.Wrapf(err, "getting data for container %s", c.ID)
 	}
 
 	c.ID = body.ID
+	c.Config = *data.Config
+	c.NetworkConfig = network.NetworkingConfig{
+		EndpointsConfig: data.NetworkSettings.Networks,
+	}
+
 	log.Printf("started %s container with ID: %s", c.Name, c.ID)
 	return body, nil
 }
@@ -162,13 +177,6 @@ func pullImageFromDockerRegistry(d Docker, image string) error {
 	return nil
 }
 
-func removeDockerImage(d Docker, image string) error {
-	_, err := d.Cli.ImageRemove(context.Background(), image, types.ImageRemoveOptions{
-		Force: true,
-	})
-	return err
-}
-
 // ExecCommand executes a given bash command through execConfig and displays the output in stdout and stderr
 // This function doesn't return an error for the failure of the command itself
 func (c Container) ExecCommand(ctx context.Context, d Docker, execConfig types.ExecConfig) (types.IDResponse, error) {
@@ -197,14 +205,16 @@ func (c Container) ExecCommand(ctx context.Context, d Docker, execConfig types.E
 	return execResponse, nil
 }
 
-func (c Container) Stop(ctx context.Context, d Docker, opts types.ContainerStartOptions) error {
+// Stop stops a running docker container.
+func (c *Container) Stop(ctx context.Context, d Docker, opts types.ContainerStartOptions) error {
 	timeout := 20 * time.Second
-	log.Println("stopping ", c.ID)
+	log.Println("stopping container: ", c.ID)
 	return d.Cli.ContainerStop(ctx, c.ID, &timeout)
 }
 
-func (c Container) Remove(ctx context.Context, d Docker) error {
-	log.Println("stopping ", c.ID)
+// Remove removes a stopped docker container
+func (c *Container) Remove(ctx context.Context, d Docker) error {
+	log.Println("removing container:  ", c.ID)
 	return d.Cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
 }
 
@@ -215,25 +225,4 @@ func CreateVolume(ctx context.Context, d Docker, opt volume.VolumeCreateBody) (t
 
 func RemoveVolume(ctx context.Context, d Docker, volumeID string) error {
 	return d.Cli.VolumeRemove(ctx, volumeID, true)
-}
-
-func CreateNetwork(ctx context.Context, d Docker, name string, opt types.NetworkCreate) (types.NetworkCreateResponse, error) {
-	networkResponse, err := d.Cli.NetworkCreate(ctx, name, opt)
-	if err != nil {
-		return types.NetworkCreateResponse{}, err
-	}
-	log.Println("INFO: network created successfully ", name)
-	return networkResponse, nil
-}
-
-func RemoveNetwork(ctx context.Context, d Docker, networkID string) error {
-	return d.Cli.NetworkRemove(ctx, networkID)
-}
-
-func NewDockerClient(ops ...client.Opt) (*client.Client, error) {
-	cli, err := client.NewClientWithOpts(ops...)
-	if err != nil {
-		return nil, err
-	}
-	return cli, nil
 }

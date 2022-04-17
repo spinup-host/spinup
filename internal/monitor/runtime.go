@@ -5,10 +5,13 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/spinup-host/spinup/internal/dockerservice"
 	"log"
 	"strconv"
+
+	"github.com/docker/docker/api/types"
+	"go.uber.org/zap"
+
+	"github.com/spinup-host/spinup/internal/dockerservice"
 )
 
 // Runtime wraps runtime configuration and state of the monitoring service
@@ -19,6 +22,8 @@ type Runtime struct {
 	pgExporterContainer *dockerservice.Container
 	prometheusContainer *dockerservice.Container
 	dockerClient        dockerservice.Docker
+	dockerHostAddr		string
+	logger *zap.Logger
 }
 
 func NewRuntime(dockerClient dockerservice.Docker) *Runtime {
@@ -38,8 +43,8 @@ func (r *Runtime) AddTarget(ctx context.Context, t *Target) error {
 		return err
 	}
 
-	newDSN := fmt.Sprintf("%s,postgresql://%s:%s@%s:%s/?sslmode=disable", r.pgExporterDSN, t.UserName, t.Password, t.Host, strconv.Itoa(t.Port))
-	newContainer, err := newPostgresExporterContainer(newDSN)
+	newDSN := fmt.Sprintf("%s,postgresql://%s:%s@%s:%s/?sslmode=disable", r.pgExporterDSN, t.UserName, t.Password, r.dockerHostAddr, strconv.Itoa(t.Port))
+	newContainer, err := r.newPostgresExporterContainer(newDSN)
 	if err != nil {
 		return err
 	}

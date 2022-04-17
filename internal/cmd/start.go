@@ -99,20 +99,19 @@ func startCmd() *cobra.Command {
 			if config.Cfg.Common.Monitoring {
 				dockerClient, err := dockerservice.NewDocker()
 				if err != nil {
-					log.Printf("error creating client %v", err)
-					return
+					utils.Logger.Error("could not create docker client", zap.Error(err))
 				}
 				monitorRuntime = monitor.NewRuntime(dockerClient)
 				if err := monitorRuntime.BootstrapServices(); err != nil {
-					log.Println(err)
+					utils.Logger.Error("could not start monitoring services", zap.Error(err))
 				} else {
-					log.Println("started monitoring services")
+					utils.Logger.Info("started spinup monitoring services")
 				}
 			}
 
 			apiListener, err := net.Listen("tcp", apiPort)
 			if err != nil {
-				utils.Logger.Fatal("Starting API server", zap.Error(err))
+				utils.Logger.Fatal("failed to start listener", zap.Error(err))
 			}
 			apiServer := &http.Server{
 				Handler: apiHandler(),
@@ -122,21 +121,26 @@ func startCmd() *cobra.Command {
 			stopCh := make(chan os.Signal, 1)
 			go func() {
 				utils.Logger.Info("starting Spinup API ", zap.String("port", apiPort))
-				apiServer.Serve(apiListener)
+				if err = apiServer.Serve(apiListener); err != nil {
+					utils.Logger.Fatal("failed to start API server", zap.Error(err))
+				}
 			}()
 
 			if apiOnly == false {
 				uiListener, err := net.Listen("tcp", uiPort)
 				if err != nil {
-					utils.Logger.Fatal("starting UI server", zap.Error(err))
+					utils.Logger.Fatal("failed to start UI server", zap.Error(err))
+					return
 				}
 
 				uiServer := &http.Server{
 					Handler: uiHandler(),
 				}
 				go func() {
-					utils.Logger.Info("sstarting Spinup UI   ", zap.String("port", uiPort))
-					uiServer.Serve(uiListener)
+					utils.Logger.Info("starting Spinup UI", zap.String("port", uiPort))
+					if err = uiServer.Serve(uiListener); err != nil {
+						utils.Logger.Fatal("failed to start UI server", zap.Error(err))
+					}
 				}()
 				defer stop(uiServer)
 			}

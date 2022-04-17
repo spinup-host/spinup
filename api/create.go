@@ -132,7 +132,6 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 			UserName:      s.Db.Username,
 			Password:      s.Db.Password,
 			Port:          s.Db.Port,
-			Host:          "127.0.0.1",
 		}
 
 		if c.monitor != nil {
