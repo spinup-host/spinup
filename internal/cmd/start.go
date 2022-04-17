@@ -101,7 +101,7 @@ func startCmd() *cobra.Command {
 				if err != nil {
 					utils.Logger.Error("could not create docker client", zap.Error(err))
 				}
-				monitorRuntime = monitor.NewRuntime(dockerClient)
+				monitorRuntime = monitor.NewRuntime(dockerClient, utils.Logger)
 				if err := monitorRuntime.BootstrapServices(); err != nil {
 					utils.Logger.Error("could not start monitoring services", zap.Error(err))
 				} else {

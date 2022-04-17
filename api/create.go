@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/spinup-host/spinup/utils"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -147,7 +148,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 					log.Printf("error creating client %v", err)
 					return
 				}
-				c.monitor = monitor.NewRuntime(dockerClient)
+				c.monitor = monitor.NewRuntime(dockerClient, utils.Logger)
 				if err := c.monitor.BootstrapServices(); err != nil {
 					log.Println(err)
 				} else {

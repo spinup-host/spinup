@@ -3,8 +3,6 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,6 +12,8 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
@@ -23,7 +23,7 @@ import (
 const (
 	PrometheusContainerName = "spinup-prometheus"
 	PgExporterContainerName = "spinup-postgres-exporter"
-	NetworkName = "spinup_services"
+	NetworkName             = "spinup_services"
 )
 
 // Target represents a postgres service for monitoring.
@@ -47,11 +47,13 @@ func (r *Runtime) BootstrapServices() error {
 	defer func() {
 		if err != nil {
 			if promContainer != nil {
-				log.Println(promContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{}))
+				stopErr := promContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{})
+				r.logger.Error("stopping prometheus container", zap.Error(stopErr))
 			}
 
 			if pgExporterContainer != nil {
-				log.Println(pgExporterContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{}))
+				stopErr := pgExporterContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{})
+				r.logger.Error("stopping exporter container", zap.Error(stopErr))
 			}
 		}
 	}()
@@ -82,7 +84,9 @@ func (r *Runtime) BootstrapServices() error {
 			return errors.Wrap(err, "failed to update prometheus config")
 		}
 	} else {
-		log.Println("reusing existing prometheus container")
+		// if the container exists, we only update the host address without over-writing the existing prometheus config
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[NetworkName].Gateway
+		r.logger.Info("reusing existing prometheus container")
 	}
 
 	pgExporterContainer, err = r.dockerClient.GetContainer(ctx, PgExporterContainerName)
@@ -99,10 +103,10 @@ func (r *Runtime) BootstrapServices() error {
 			return errors.Wrap(err, "failed to start pg_exporter container")
 		}
 	} else {
-		log.Println("reusing existing postgres_exporter container")
+		r.logger.Info("reusing existing postgres_exporter container")
 	}
 
-	log.Printf("using docker host address: %s", r.dockerHostAddr)
+	r.logger.Info(fmt.Sprintf("using docker host address :%s", r.dockerHostAddr))
 	r.pgExporterContainer = pgExporterContainer
 	r.prometheusContainer = promContainer
 	return nil
@@ -153,12 +157,12 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	// Mount points for prometheus config and prometheus persistence
 	mounts := []mount.Mount{
 		{
-			Type: mount.TypeBind,
+			Type:   mount.TypeBind,
 			Source: promCfgPath,
 			Target: "/opt/bitnami/prometheus/conf/prometheus.yml",
 		},
 		{
-			Type: mount.TypeBind,
+			Type:   mount.TypeBind,
 			Source: promDataDir,
 			Target: "/opt/bitnami/prometheus/data",
 		},
@@ -169,7 +173,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 		PrometheusContainerName,
 		container.Config{
 			Image: image,
-			User: "root",
+			User:  "root",
 		},
 		container.HostConfig{
 			PortBindings: nat.PortMap{

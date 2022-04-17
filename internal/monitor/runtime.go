@@ -5,7 +5,6 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/docker/docker/api/types"
@@ -22,15 +21,16 @@ type Runtime struct {
 	pgExporterContainer *dockerservice.Container
 	prometheusContainer *dockerservice.Container
 	dockerClient        dockerservice.Docker
-	dockerHostAddr		string
-	logger *zap.Logger
+	dockerHostAddr      string
+	logger              *zap.Logger
 }
 
-func NewRuntime(dockerClient dockerservice.Docker) *Runtime {
+func NewRuntime(dockerClient dockerservice.Docker, logger *zap.Logger) *Runtime {
 	return &Runtime{
 		targets:       make([]*Target, 0),
 		pgExporterDSN: "",
 		dockerClient:  dockerClient,
+		logger:        logger,
 	}
 }
 
@@ -51,7 +51,7 @@ func (r *Runtime) AddTarget(ctx context.Context, t *Target) error {
 
 	_, err = newContainer.Start(ctx, r.dockerClient)
 	if err != nil {
-		log.Println(newContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{}))
+		r.logger.Error("stopping exporter container", zap.Error(newContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{})))
 		return err
 	}
 
