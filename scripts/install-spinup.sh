@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for req in "docker" "openssl" "npm";
+for req in "docker" "openssl" "npm" "jq";
 do
   if [ ! $(command -v "$req") ]; then
       echo "Cannot find or execute '$req' command"
@@ -10,12 +10,15 @@ done
 
 if [ -z "$CLIENT_ID" ]; then
   echo "No value for environment variable CLIENT_ID"
-  exit 1
 fi
 
 if [ -z "$CLIENT_SECRET" ]; then
   echo "No value for environment variable CLIENT_SECRET"
-  exit 1
+fi
+
+if [ -z "$API_SPINUP_KEY" ]; then
+  echo "No value for environment variable API_SPINUP_KEY"
+  API_SPINUP_KEY="spinup"
 fi
 
 SPINUP_DIR=${SPINUP_DIR:-"${HOME}/.local/spinup"}
@@ -75,6 +78,7 @@ else
     projectDir: ${SPINUP_DIR}
     client_id: ${CLIENT_ID}
     client_secret: ${CLIENT_SECRET}
+    api_key: ${API_SPINUP_KEY}
 EOF
 fi
 
