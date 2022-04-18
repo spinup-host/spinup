@@ -11,6 +11,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
+
+	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/misc"
 )
@@ -87,7 +89,7 @@ func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice
 	}
 
 	// we attach all created services to the same docker network
-	networkName := "spinup_services"
+	networkName := config.DefaultNetworkName
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}

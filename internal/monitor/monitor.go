@@ -23,13 +23,11 @@ import (
 const (
 	PrometheusContainerName = "spinup-prometheus"
 	PgExporterContainerName = "spinup-postgres-exporter"
-	NetworkName             = "spinup_services"
 )
 
 // Target represents a postgres service for monitoring.
-// The assumption is that all services are running on the same host, hence only ports should differ
+// it contains only fields that differ between different services
 type Target struct {
-	DockerNetwork string
 	ContainerName string
 	UserName      string
 	Password      string
@@ -79,13 +77,13 @@ func (r *Runtime) BootstrapServices() error {
 
 		// we expect all containers to have the same gateway IP, but we assign it here
 		// so that we can update the prometheus config with the right IP of targets
-		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[NetworkName].Gateway
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[config.DefaultNetworkName].Gateway
 		if err = r.writePromConfig(promCfgPath); err != nil {
 			return errors.Wrap(err, "failed to update prometheus config")
 		}
 	} else {
 		// if the container exists, we only update the host address without over-writing the existing prometheus config
-		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[NetworkName].Gateway
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[config.DefaultNetworkName].Gateway
 		r.logger.Info("reusing existing prometheus container")
 	}
 
@@ -114,7 +112,7 @@ func (r *Runtime) BootstrapServices() error {
 
 func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Container, error) {
 	endpointConfig := map[string]*network.EndpointSettings{}
-	endpointConfig[NetworkName] = &network.EndpointSettings{}
+	endpointConfig[config.DefaultNetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	image := "quay.io/prometheuscommunity/postgres-exporter"
 	var env []string
@@ -144,7 +142,7 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 
 func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Container, error) {
 	endpointConfig := map[string]*network.EndpointSettings{}
-	endpointConfig[NetworkName] = &network.EndpointSettings{}
+	endpointConfig[config.DefaultNetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	image := "bitnami/prometheus"
 

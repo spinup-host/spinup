@@ -3,13 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spinup-host/spinup/utils"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
 
+	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
 
 	"github.com/spinup-host/spinup/config"
@@ -18,6 +18,7 @@ import (
 	"github.com/spinup-host/spinup/internal/monitor"
 	"github.com/spinup-host/spinup/internal/postgres"
 	"github.com/spinup-host/spinup/misc"
+	"github.com/spinup-host/spinup/utils"
 )
 
 func Hello(w http.ResponseWriter, req *http.Request) {
@@ -73,7 +74,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	s.Architecture = config.Cfg.Common.Architecture
-	s.DockerNetwork = "spinup_services"
+	s.DockerNetwork = config.DefaultNetworkName
 	image := s.Architecture + "/" + s.Db.Type + ":" + strconv.Itoa(int(s.Version.Maj))
 	if s.Version.Min > 0 {
 		image += "." + strconv.Itoa(int(s.Version.Min))
@@ -128,7 +129,6 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 
 	if s.Db.Monitoring == "enable" {
 		target := &monitor.Target{
-			DockerNetwork: s.DockerNetwork,
 			ContainerName: postgresContainer.Name,
 			UserName:      s.Db.Username,
 			Password:      s.Db.Password,
@@ -137,7 +137,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 
 		if c.monitor != nil {
 			if err = c.monitor.AddTarget(req.Context(), target); err != nil {
-				log.Printf("ERROR: setting up monitoring for service: %v", err)
+				utils.Logger.Error("failed to set up monitoring for service", zap.Error(err))
 				http.Error(w, "error enabling monitoring", 500)
 			}
 		} else {
