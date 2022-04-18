@@ -12,7 +12,6 @@ import (
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
-	"github.com/spinup-host/spinup/internal/monitoring"
 	"github.com/spinup-host/spinup/internal/postgres"
 	"github.com/spinup-host/spinup/misc"
 	_ "modernc.org/sqlite"
@@ -123,18 +122,24 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
-	if s.Db.Monitoring == "enable" {
-		target := monitoring.Target{
-			DockerNetwork: s.DockerNetwork,
-			ContainerName: postgresContainer.Name,
-			UserName:      s.Db.Username,
-			Password:      s.Db.Password,
-		}
-		_, err := target.Enable()
-		if err != nil {
-			log.Printf("ERROR: enabling monitoring %v", err)
-			http.Error(w, "Error enabling monitoring", 500)
-			return
-		}
+
+	serviceResponse := struct {
+		HostName    string
+		Port        int
+		ContainerID string
+	}{
+		HostName: "localhost",
+		Port: s.Db.Port,
+		ContainerID: postgresContainer.ID,
 	}
+	jsonBody, err := json.Marshal(serviceResponse)
+	if err != nil {
+		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
+		http.Error(w, "Internal server error ", 500)
+		return
+	}
+
+	w.Header().Set("Content-type", "application/json")
+	w.Write(jsonBody)
+	return
 }

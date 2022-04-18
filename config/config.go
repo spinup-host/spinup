@@ -71,11 +71,6 @@ type Destination struct {
 	ApiKeyID     string
 	ApiKeySecret string
 }
-type serviceResponse struct {
-	HostName    string
-	Port        int
-	ContainerID string
-}
 
 type ClusterInfo struct {
 	ID         int    `json:"id"`
