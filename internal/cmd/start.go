@@ -9,7 +9,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -80,6 +82,9 @@ func startCmd() *cobra.Command {
 		Short: "start the spinup API and frontend servers",
 		Run: func(cmd *cobra.Command, args []string) {
 			utils.InitializeLogger("", "")
+			if !isDockerdRunning(context.Background()) {
+				log.Fatalf("FATAL: docker daemon is not running. Start docker daemon")
+			}
 			log.Println(fmt.Sprintf("INFO: Using config file: %s", cfgFile))
 			if err := validateConfig(cfgFile); err != nil {
 				log.Fatal("FATAL : Validating Config %v", err)
@@ -178,4 +183,19 @@ func stop(server *http.Server) {
 	if err := server.Shutdown(ctx); err != nil {
 		utils.Logger.Info("Can't stop Spinup API correctly:", zap.Error(err))
 	}
+}
+
+// isDockerdRunning returns true if docker daemon process is running on the host
+// ref: https://docs.docker.com/config/daemon/#check-whether-docker-is-running
+func isDockerdRunning(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	stdout, err := exec.CommandContext(ctx, "docker", "info").CombinedOutput()
+	if err != nil {
+		return false
+	}
+	if strings.Contains(string(stdout), "ERROR") {
+		return false
+	}
+	return true
 }
