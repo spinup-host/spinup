@@ -16,9 +16,9 @@ if [ -z "$CLIENT_SECRET" ]; then
   echo "No value for environment variable CLIENT_SECRET"
 fi
 
-if [ -z "$API_SPINUP_KEY" ]; then
-  echo "No value for environment variable API_SPINUP_KEY"
-  API_SPINUP_KEY="spinup"
+if [ -z "$SPINUP_API_KEY" ]; then
+  echo "No value for environment variable SPINUP_API_KEY. Setting it to default value of spinup"
+  SPINUP_API_KEY="spinup"
 fi
 
 SPINUP_DIR=${SPINUP_DIR:-"${HOME}/.local/spinup"}
@@ -48,10 +48,11 @@ cd ${SPINUP_TMP_DIR}/spinup-dash
 # setup env variables for dashboard's npm build
 cat >.env <<-EOF
 REACT_APP_CLIENT_ID=${CLIENT_ID}
-REACT_APP_REDIRECT_URI="http://localhost:3000/login"
-REACT_APP_SERVER_URI="http://localhost:4434"
-REACT_APP_GITHUB_SERVER="http://localhost:4434/githubAuth"
-REACT_APP_URL="https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REACT_APP_REDIRECT_URI}"
+REACT_APP_REDIRECT_URI=http://localhost:3000/login
+REACT_APP_SERVER_URI=http://localhost:4434
+REACT_APP_GITHUB_SERVER=http://localhost:4434/githubAuth
+REACT_APP_LIST_URI=http://localhost:4434/listcluster
+REACT_APP_URL=https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=http://localhost:3000/login
 EOF
 cat .env
 npm install --ignore-scripts
@@ -78,7 +79,7 @@ else
     projectDir: ${SPINUP_DIR}
     client_id: ${CLIENT_ID}
     client_secret: ${CLIENT_SECRET}
-    api_key: ${API_SPINUP_KEY}
+    api_key: ${SPINUP_API_KEY}
 EOF
 fi
 
