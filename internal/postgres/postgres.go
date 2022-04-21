@@ -11,6 +11,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
+
+	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/misc"
 )
@@ -51,18 +53,7 @@ func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice
 			}
 		}
 	}()
-	networkResponse, err := dockerservice.CreateNetwork(context.Background(), dockerClient, props.Name+"_default", types.NetworkCreate{CheckDuplicate: true})
-	if err != nil {
-		return dockerservice.Container{}, err
-	}
-	// defer for cleaning network removal
-	defer func() {
-		if err != nil {
-			if errNetworkRemove := dockerservice.RemoveNetwork(context.Background(), dockerClient, networkResponse.ID); errNetworkRemove != nil {
-				err = fmt.Errorf("error removing network during failed service creation %w", err)
-			}
-		}
-	}()
+
 	containerName := PREFIXPGCONTAINER + props.Name
 	newHostPort, err := nat.NewPort("tcp", strconv.Itoa(props.Port))
 	if err != nil {
@@ -97,14 +88,16 @@ func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice
 		},
 	}
 
+	// we attach all created services to the same docker network
+	networkName := config.DefaultNetworkName
 	endpointConfig := map[string]*network.EndpointSettings{}
-	networkName := props.Name + "_default"
-	// setting key and value for the map. networkName=$dbname_default (eg: viggy_default)
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	env := []string{}
-	env = append(env, misc.StringToDockerEnvVal("POSTGRES_USER", props.Username))
-	env = append(env, misc.StringToDockerEnvVal("POSTGRES_PASSWORD", props.Password))
+
+	env := []string{
+		misc.StringToDockerEnvVal("POSTGRES_USER", props.Username),
+		misc.StringToDockerEnvVal("POSTGRES_PASSWORD", props.Password),
+	}
 
 	postgresContainer = dockerservice.NewContainer(
 		containerName,

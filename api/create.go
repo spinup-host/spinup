@@ -9,19 +9,23 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"go.uber.org/zap"
+	_ "modernc.org/sqlite"
+
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
+	"github.com/spinup-host/spinup/internal/monitor"
 	"github.com/spinup-host/spinup/internal/postgres"
 	"github.com/spinup-host/spinup/misc"
-	_ "modernc.org/sqlite"
+	"github.com/spinup-host/spinup/utils"
 )
 
 func Hello(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello !! Welcome to spinup \n")
 }
 
-func CreateService(w http.ResponseWriter, req *http.Request) {
+func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) {
 	if (*req).Method != "POST" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
@@ -70,7 +74,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	s.Architecture = config.Cfg.Common.Architecture
-	s.DockerNetwork = fmt.Sprintf("%s_default", s.Db.Name) // following docker-compose naming format for compatibility
+	s.DockerNetwork = config.DefaultNetworkName
 	image := s.Architecture + "/" + s.Db.Type + ":" + strconv.Itoa(int(s.Version.Maj))
 	if s.Version.Min > 0 {
 		image += "." + strconv.Itoa(int(s.Version.Min))
@@ -96,7 +100,7 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Error creating postgres docker service", 500)
 		return
 	}
-	body, err := postgresContainer.Start(dockerClient)
+	body, err := postgresContainer.Start(req.Context(), dockerClient)
 	if err != nil {
 		log.Printf("ERROR: starting new docker service for %s %v", s.UserID, err)
 		http.Error(w, "Error starting postgres docker service", 500)
@@ -123,13 +127,51 @@ func CreateService(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if s.Db.Monitoring == "enable" {
+		target := &monitor.Target{
+			ContainerName: postgresContainer.Name,
+			UserName:      s.Db.Username,
+			Password:      s.Db.Password,
+			Port:          s.Db.Port,
+		}
+
+		if c.monitor != nil {
+			if err = c.monitor.AddTarget(req.Context(), target); err != nil {
+				utils.Logger.Error("failed to set up monitoring for service", zap.Error(err))
+				http.Error(w, "error enabling monitoring", 500)
+			}
+		} else {
+			// this might take more time especially if the image doesn't exist locally, so we wrap it in a goroutine
+			go func() {
+				dockerClient, err := dockerservice.NewDocker()
+				if err != nil {
+					log.Printf("error creating client %v", err)
+					return
+				}
+				c.monitor = monitor.NewRuntime(dockerClient, utils.Logger)
+				if err := c.monitor.BootstrapServices(); err != nil {
+					log.Println(err)
+				} else {
+					log.Println("started monitoring services")
+				}
+				if err = c.monitor.AddTarget(req.Context(), target); err != nil {
+					log.Printf("ERROR: setting up monitoring for service: %v", err)
+				}
+			}()
+
+			// todo: find a way to send "info" messages to the client without making them an error
+			log.Println("monitoring services are not running, Spinup will start them in the background")
+		}
+		return
+	}
+
 	serviceResponse := struct {
 		HostName    string
 		Port        int
 		ContainerID string
 	}{
-		HostName: "localhost",
-		Port: s.Db.Port,
+		HostName:    "localhost",
+		Port:        s.Db.Port,
 		ContainerID: postgresContainer.ID,
 	}
 	jsonBody, err := json.Marshal(serviceResponse)

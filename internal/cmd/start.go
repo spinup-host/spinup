@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/monitor"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -36,10 +38,12 @@ var (
 
 	apiPort = ":4434"
 	uiPort  = ":3000"
+
+	monitorRuntime *monitor.Runtime
 )
 
 func apiHandler() http.Handler {
-	ch, err := api.NewClusterHandler()
+	ch, err := api.NewClusterHandler(monitorRuntime)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
@@ -50,7 +54,7 @@ func apiHandler() http.Handler {
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", api.Hello)
-	mux.HandleFunc("/createservice", api.CreateService)
+	mux.HandleFunc("/createservice", ch.CreateService)
 	mux.HandleFunc("/githubAuth", api.GithubAuth)
 	mux.HandleFunc("/logs", api.Logs)
 	mux.HandleFunc("/jwt", api.JWT)
@@ -92,9 +96,22 @@ func startCmd() *cobra.Command {
 			log.Println("INFO: Initial Validations successful")
 			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
 
+			if config.Cfg.Common.Monitoring {
+				dockerClient, err := dockerservice.NewDocker()
+				if err != nil {
+					utils.Logger.Error("could not create docker client", zap.Error(err))
+				}
+				monitorRuntime = monitor.NewRuntime(dockerClient, utils.Logger)
+				if err := monitorRuntime.BootstrapServices(); err != nil {
+					utils.Logger.Error("could not start monitoring services", zap.Error(err))
+				} else {
+					utils.Logger.Info("started spinup monitoring services")
+				}
+			}
+
 			apiListener, err := net.Listen("tcp", apiPort)
 			if err != nil {
-				utils.Logger.Fatal("Starting API server", zap.Error(err))
+				utils.Logger.Fatal("failed to start listener", zap.Error(err))
 			}
 			apiServer := &http.Server{
 				Handler: apiHandler(),
@@ -104,21 +121,26 @@ func startCmd() *cobra.Command {
 			stopCh := make(chan os.Signal, 1)
 			go func() {
 				utils.Logger.Info("starting Spinup API ", zap.String("port", apiPort))
-				apiServer.Serve(apiListener)
+				if err = apiServer.Serve(apiListener); err != nil {
+					utils.Logger.Fatal("failed to start API server", zap.Error(err))
+				}
 			}()
 
 			if apiOnly == false {
 				uiListener, err := net.Listen("tcp", uiPort)
 				if err != nil {
-					utils.Logger.Fatal("starting UI server", zap.Error(err))
+					utils.Logger.Fatal("failed to start UI server", zap.Error(err))
+					return
 				}
 
 				uiServer := &http.Server{
 					Handler: uiHandler(),
 				}
 				go func() {
-					utils.Logger.Info("sstarting Spinup UI   ", zap.String("port", uiPort))
-					uiServer.Serve(uiListener)
+					utils.Logger.Info("starting Spinup UI", zap.String("port", uiPort))
+					if err = uiServer.Serve(uiListener); err != nil {
+						utils.Logger.Fatal("failed to start UI server", zap.Error(err))
+					}
 				}()
 				defer stop(uiServer)
 			}

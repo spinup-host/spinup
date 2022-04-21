@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/spinup-host/spinup/internal/monitor"
 	"io/fs"
 	"log"
 	"net/http"
@@ -16,17 +17,19 @@ import (
 )
 
 type ClusterHandler struct {
-	db metastore.Db
+	db      metastore.Db
+	monitor *monitor.Runtime
 }
 
-func NewClusterHandler() (ClusterHandler, error) {
+func NewClusterHandler(monitor *monitor.Runtime) (ClusterHandler, error) {
 	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
 		return ClusterHandler{}, err
 	}
 	return ClusterHandler{
-		db: db,
+		db:      db,
+		monitor: monitor,
 	}, nil
 }
 
