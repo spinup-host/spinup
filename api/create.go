@@ -166,9 +166,9 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	}
 
 	serviceResponse := struct {
-		HostName    string
-		Port        int
-		ContainerID string
+		HostName    string `json:"host_name"`
+		Port        int    `json:"port"`
+		ContainerID string `json:"container_id"`
 	}{
 		HostName:    "localhost",
 		Port:        s.Db.Port,

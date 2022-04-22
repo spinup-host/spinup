@@ -3,8 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/spinup-host/spinup/internal/dockerservice"
-	"github.com/spinup-host/spinup/internal/monitor"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -13,22 +11,27 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/spinup-host/spinup/api"
-	"github.com/spinup-host/spinup/config"
-	"github.com/spinup-host/spinup/internal/backup"
-	"github.com/spinup-host/spinup/metrics"
-	"github.com/spinup-host/spinup/utils"
-
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt"
 	"github.com/rs/cors"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
-	"go.uber.org/zap"
+	"github.com/spinup-host/spinup/api"
+	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/internal/backup"
+	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/monitor"
+	"github.com/spinup-host/spinup/metrics"
+	"github.com/spinup-host/spinup/utils"
 )
 
 var (
@@ -71,13 +74,6 @@ func apiHandler() http.Handler {
 	})
 
 	return c.Handler(mux)
-}
-
-func uiHandler() http.Handler {
-	fs := http.FileServer(http.Dir(uiPath))
-	http.Handle("/", fs)
-
-	return http.DefaultServeMux
 }
 
 func startCmd() *cobra.Command {
@@ -133,8 +129,27 @@ func startCmd() *cobra.Command {
 					return
 				}
 
+				r := chi.NewRouter()
+				r.Use(middleware.Logger)
+
+				fs := http.FileServer(http.Dir(uiPath))
+				http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.Path != "/" {
+						fullPath := filepath.Join(uiPath, strings.TrimPrefix(path.Clean(r.URL.Path), "/"))
+						_, err := os.Stat(fullPath)
+						if err != nil {
+							if !os.IsNotExist(err) {
+								utils.Logger.Error("could not find asset", zap.Error(err))
+							}
+							// Requested file does not exist so we return the default (resolves to index.html)
+							r.URL.Path = "/"
+						}
+					}
+					fs.ServeHTTP(w, r)
+				})
+
 				uiServer := &http.Server{
-					Handler: uiHandler(),
+					Handler: http.DefaultServeMux,
 				}
 				go func() {
 					utils.Logger.Info("starting Spinup UI", zap.String("port", uiPort))
@@ -155,7 +170,7 @@ func startCmd() *cobra.Command {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		utils.Logger.Fatal("Fobtaining home directory: ", zap.Error(err))
+		utils.Logger.Fatal("obtaining home directory: ", zap.Error(err))
 	}
 	sc.Flags().StringVar(&cfgFile, "config",
 		fmt.Sprintf("%s/.local/spinup/config.yaml", home), "Path to spinup configuration")
