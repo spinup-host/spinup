@@ -121,7 +121,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	insertSql := "insert into clusterInfo(clusterId, name, username, password, port, majVersion, minVersion) values(?, ?, ?, ?, ?, ?, ?)"
-	if err := metastore.InsertServiceIntoMeta(db, insertSql, postgresContainer.ID, s.Db.Name, s.Db.Username, s.Db.Password, s.Db.Port, int(s.Version.Maj), int(s.Version.Min)); err != nil {
+	if err := metastore.InsertService(db, insertSql, postgresContainer.ID, s.Db.Name, s.Db.Username, s.Db.Password, s.Db.Port, int(s.Version.Maj), int(s.Version.Min)); err != nil {
 		log.Printf("ERROR: executing insert into cluster info table %v", err)
 		misc.ErrorResponse(w, "internal server error", 500)
 		return

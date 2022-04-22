@@ -78,6 +78,7 @@ type Destination struct {
 }
 
 type ClusterInfo struct {
+	Host       string `json:"host"`
 	ID         int    `json:"id"`
 	ClusterID  string `json:"cluster_id"`
 	Name       string `json:"name"`
