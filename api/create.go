@@ -171,6 +171,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		Name:       s.Db.Name,
 		Port:       s.Db.Port,
 		Username:   s.Db.Username,
+		Password:   s.Db.Password,
 		MajVersion: int(s.Version.Maj),
 		MinVersion: int(s.Version.Min),
 	}

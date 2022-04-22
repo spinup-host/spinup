@@ -111,7 +111,7 @@ func AllClusters(db Db) (clustersInfo, error) {
 	if err := migration(context.Background(), db); err != nil {
 		return nil, fmt.Errorf("error running a migration %w", err)
 	}
-	rows, err := db.Client.Query("select id, clusterId, name, username, port, majversion, minversion from clusterInfo")
+	rows, err := db.Client.Query("select id, clusterId, name, username, password, port, majversion, minversion from clusterInfo")
 	if err != nil {
 		return nil, fmt.Errorf("unable to query clusterinfo")
 	}
@@ -119,7 +119,7 @@ func AllClusters(db Db) (clustersInfo, error) {
 	var csi clustersInfo
 	var cluster config.ClusterInfo
 	for rows.Next() {
-		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Port, &cluster.MajVersion, &cluster.MinVersion)
+		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Password, &cluster.Port, &cluster.MajVersion, &cluster.MinVersion)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -132,12 +132,13 @@ func AllClusters(db Db) (clustersInfo, error) {
 // GetClusterByID returns info about the service whose cluster ID is provided.
 func GetClusterByID(db Db, clusterId string) (config.ClusterInfo, error) {
 	var ci config.ClusterInfo
-	query := `SELECT id, clusterId, name, username, port, majVersion, minVersion, FROM clusterInfo WHERE clusterId = ? LIMIT 1`
+	query := `SELECT id, clusterId, name, username, password, port, majVersion, minVersion, FROM clusterInfo WHERE clusterId = ? LIMIT 1`
 	err := db.Client.QueryRow(query, clusterId).Scan(
 		&ci.ID,
 		&ci.ClusterID,
 		&ci.Name,
 		&ci.Username,
+		&ci.Password,
 		&ci.Port,
 		&ci.MajVersion,
 		&ci.MinVersion,

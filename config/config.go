@@ -84,6 +84,7 @@ type ClusterInfo struct {
 	Name       string `json:"name"`
 	Port       int    `json:"port"`
 	Username   string `json:"username"`
+	Password   string `json:"password"`
 	MajVersion int    `json:"majversion"`
 	MinVersion int    `json:"minversion"`
 }
