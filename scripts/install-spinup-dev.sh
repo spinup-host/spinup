@@ -22,13 +22,25 @@ if [ -z "$SPINUP_API_KEY" ]; then
 fi
 
 SPINUP_DIR=${SPINUP_DIR:-"${HOME}/.local/spinup"}
-echo "Fetching latest Spinup version..."
-SPINUP_VERSION=$(curl --silent "https://api.github.com/repos/spinup-host/spinup/releases" | jq -r 'first | .tag_name')
+
+if [ -z "$API_VERSION" ]; then
+  echo "Fetching latest Spinup version..."
+    SPINUP_VERSION=$(curl --silent "https://api.github.com/repos/spinup-host/spinup/releases" | jq -r 'first | .tag_name')
+else
+  SPINUP_VERSION=$API_VERSION
+fi
+
+if [ -z "$UI_VERSION" ]; then
+  echo "Fetching latest Spinup version..."
+    SPINUP_UI_VERSION=main
+else
+  SPINUP_UI_VERSION=$UI_VERSION
+fi
+
 
 OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
 PLATFORM="${OS}-${ARCH}"
-API_DL_URL="https://github.com/spinup-host/spinup/releases/download/${SPINUP_VERSION}/spinup-backend-${SPINUP_VERSION}-${PLATFORM}.tar.gz"
 
 SPINUP_PACKAGE="spinup-${SPINUP_VERSION}-${OS}-${ARCH}.tar.gz"
 SPINUP_TMP_DIR="/tmp/spinup-install"
@@ -36,14 +48,14 @@ SPINUP_TMP_DIR="/tmp/spinup-install"
 mkdir -p ${SPINUP_DIR}
 mkdir -p ${SPINUP_TMP_DIR}
 
-curl -LSs ${API_DL_URL} -o ${SPINUP_TMP_DIR}/${SPINUP_PACKAGE}
-tar xzvf ${SPINUP_TMP_DIR}/${SPINUP_PACKAGE} -C "${SPINUP_TMP_DIR}/"
-rm -f ${SPINUP_TMP_DIR}/${SPINUP_PACKAGE}
+echo "git clone --depth=1 --branch=${SPINUP_VERSION} https://github.com/spinup-host/spinup.git ${SPINUP_TMP_DIR}/spinup-api"
+git clone --depth=1 --branch=${SPINUP_VERSION} https://github.com/spinup-host/spinup.git ${SPINUP_TMP_DIR}/spinup-api
+cd ${SPINUP_TMP_DIR}/spinup-api
+go build -o spinup-backend ./main.go
+./spinup-backend version
+cp ${SPINUP_TMP_DIR}/spinup-api/spinup-backend ${SPINUP_DIR}/spinup
 
-${SPINUP_TMP_DIR}/spinup-backend version
-cp ${SPINUP_TMP_DIR}/spinup-backend ${SPINUP_DIR}/spinup
-
-git clone --depth=1 https://github.com/spinup-host/spinup-dash.git ${SPINUP_TMP_DIR}/spinup-dash
+git clone --depth=1 --branch=${UI_VERSION} https://github.com/spinup-host/spinup-dash.git ${SPINUP_TMP_DIR}/spinup-dash
 cd ${SPINUP_TMP_DIR}/spinup-dash
 # setup env variables for dashboard's npm build
 cat >.env <<-EOF
