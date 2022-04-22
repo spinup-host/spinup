@@ -39,7 +39,8 @@ export SPINUP_API_KEY=<YOUR_API_KEY>
 A list of environment variables supported by Spinup during installation is provided below:
 - `SPINUP_API_KEY`: Your Spinup API key. Set this to override the default installation key.
 - `SPINUP_DIR`: Spinup installation directory. Defaults to `~/.local/spinup`
-- `VERSION`: The Spinup version to install. By default, Spinup installs the latest release, but this can be useful if you're trying to test out a different branch.
+- `API_VERSION`: The Spinup API version to install. By default, Spinup installs the latest release. This can be useful if you're trying to test out a different branch.
+- `UI_VERSION`: The Spinup dashboard version to install. By default, Spinup installs from the main branch. This can be useful if you're trying to test out a different branch.
 - `CLIENT_ID`: GitHub application ID. This is only required if you intend to use GitHub's authentication.
 - `CLIENT_SECRET`; GitHub application secret. This is only required if you intend to use GitHub's authentication.
 

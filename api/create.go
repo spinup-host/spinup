@@ -165,14 +165,14 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	serviceResponse := struct {
-		HostName    string `json:"host_name"`
-		Port        int    `json:"port"`
-		ContainerID string `json:"container_id"`
-	}{
-		HostName:    "localhost",
-		Port:        s.Db.Port,
-		ContainerID: postgresContainer.ID,
+	serviceResponse := config.ClusterInfo{
+		Host:       "localhost",
+		ClusterID:  postgresContainer.ID,
+		Name:       s.Db.Name,
+		Port:       s.Db.Port,
+		Username:   s.Db.Username,
+		MajVersion: int(s.Version.Maj),
+		MinVersion: int(s.Version.Min),
 	}
 	jsonBody, err := json.Marshal(serviceResponse)
 	if err != nil {
