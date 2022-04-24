@@ -98,7 +98,7 @@ func startCmd() *cobra.Command {
 				utils.Logger.Error("could not create docker client", zap.Error(err))
 			}
 			ctx := context.TODO()
-			_, err = dockerClient.CreateNetwork(ctx, config.DefaultNetworkName, types.NetworkCreate{})
+			_, err = dockerClient.CreateNetwork(ctx, config.DefaultNetworkName, types.NetworkCreate{CheckDuplicate: true})
 			if err != nil {
 				utils.Logger.Fatal("unable to create docker network", zap.Error(err))
 			}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -55,10 +56,29 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 // CreateNetwork creates a new Docker network.
 func (d Docker) CreateNetwork(ctx context.Context, name string, opt types.NetworkCreate) (types.NetworkCreateResponse, error) {
 	networkResponse, err := d.Cli.NetworkCreate(ctx, name, opt)
-	if err != nil {
-		return types.NetworkCreateResponse{}, err
+	if err == nil {
+		return networkResponse, nil
 	}
-	return networkResponse, nil
+
+	if !strings.Contains(err.Error(), fmt.Sprintf("network with name %s already exists", name)) {
+		return networkResponse, err
+	} else {
+		listFilters := filters.NewArgs()
+		listFilters.Add("name", name)
+		networks, err := d.Cli.NetworkList(ctx, types.NetworkListOptions{Filters: listFilters})
+		if err != nil {
+			return networkResponse, err
+		}
+
+		if len(networks) > 0 {
+			// multiple networks with the same name exists.
+			// we return an error and let the user clean them out
+			return networkResponse, fmt.Errorf("found multiple networks with name: '%s'. Remove the networks and restart Spinup", name)
+		}
+		return types.NetworkCreateResponse{
+			ID: networks[0].ID,
+		}, nil
+	}
 }
 
 // RemoveNetwork removes an existing docker network.
