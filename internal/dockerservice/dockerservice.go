@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -18,6 +19,8 @@ import (
 type Docker struct {
 	Cli *client.Client
 }
+
+var ErrDuplicateNetwork = errors.New("duplicate networks found with given name")
 
 // GetContainer returns a docker container with the provided name (if any exists).
 // if no match exists, it returns a nil container and a nil error.
@@ -39,8 +42,8 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 			}
 
 			c := &Container{
-				ID:   match.ID,
-				Name: name,
+				ID:     match.ID,
+				Name:   name,
 				Config: *data.Config,
 				NetworkConfig: network.NetworkingConfig{
 					EndpointsConfig: data.NetworkSettings.Networks,
@@ -55,10 +58,29 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 // CreateNetwork creates a new Docker network.
 func (d Docker) CreateNetwork(ctx context.Context, name string, opt types.NetworkCreate) (types.NetworkCreateResponse, error) {
 	networkResponse, err := d.Cli.NetworkCreate(ctx, name, opt)
-	if err != nil {
-		return types.NetworkCreateResponse{}, err
+	if err == nil {
+		return networkResponse, nil
 	}
-	return networkResponse, nil
+
+	if !strings.Contains(err.Error(), fmt.Sprintf("network with name %s already exists", name)) {
+		return networkResponse, err
+	} else {
+		listFilters := filters.NewArgs()
+		listFilters.Add("name", name)
+		networks, err := d.Cli.NetworkList(ctx, types.NetworkListOptions{Filters: listFilters})
+		if err != nil {
+			return networkResponse, err
+		}
+
+		if len(networks) > 1 {
+			// multiple networks with the same name exists.
+			// we return an error and let the user clean them out
+			return networkResponse, ErrDuplicateNetwork
+		}
+		return types.NetworkCreateResponse{
+			ID: networks[0].ID,
+		}, nil
+	}
 }
 
 // RemoveNetwork removes an existing docker network.
