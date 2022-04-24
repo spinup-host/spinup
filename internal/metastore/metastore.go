@@ -64,7 +64,7 @@ func migration(ctx context.Context, db Db) error {
 }
 
 //TODO: How to write generic functions with varying fields and types? Maybe generics
-func InsertServiceIntoMeta(db Db, sql, clusterId, name, username, password string, port, majVersion, minVersion int) error {
+func InsertService(db Db, sql, clusterId, name, username, password string, port, majVersion, minVersion int) error {
 	tx, err := db.Client.Begin()
 	if err != nil {
 		return fmt.Errorf("unable to begin a transaction %w", err)
@@ -85,7 +85,7 @@ func InsertServiceIntoMeta(db Db, sql, clusterId, name, username, password strin
 	return nil
 }
 
-func InsertBackupIntoMeta(db Db, sql, clusterId, destination, bucket string, second, minute, hour, dom, month, dow int) error {
+func InsertBackup(db Db, sql, clusterId, destination, bucket string, second, minute, hour, dom, month, dow int) error {
 	tx, err := db.Client.Begin()
 	if err != nil {
 		return fmt.Errorf("unable to begin a transaction %w", err)
@@ -103,15 +103,15 @@ func InsertBackupIntoMeta(db Db, sql, clusterId, destination, bucket string, sec
 	return nil
 }
 
-// ClustersInfo returns all clusters from clusterinfo table
-func ClustersInfo(db Db) (clustersInfo, error) {
+// AllClusters returns all clusters from clusterinfo table
+func AllClusters(db Db) (clustersInfo, error) {
 	if err := db.Client.Ping(); err != nil {
 		return nil, fmt.Errorf("error pinging sqlite database %w", err)
 	}
 	if err := migration(context.Background(), db); err != nil {
 		return nil, fmt.Errorf("error running a migration %w", err)
 	}
-	rows, err := db.Client.Query("select id, clusterId, name, username, port, majversion, minversion from clusterInfo")
+	rows, err := db.Client.Query("select id, clusterId, name, username, password, port, majversion, minversion from clusterInfo")
 	if err != nil {
 		return nil, fmt.Errorf("unable to query clusterinfo")
 	}
@@ -119,11 +119,30 @@ func ClustersInfo(db Db) (clustersInfo, error) {
 	var csi clustersInfo
 	var cluster config.ClusterInfo
 	for rows.Next() {
-		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Port, &cluster.MajVersion, &cluster.MinVersion)
+		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Password, &cluster.Port, &cluster.MajVersion, &cluster.MinVersion)
 		if err != nil {
 			log.Fatal(err)
 		}
+		cluster.Host = "localhost"
 		csi = append(csi, cluster)
 	}
 	return csi, nil
+}
+
+// GetClusterByID returns info about the service whose cluster ID is provided.
+func GetClusterByID(db Db, clusterId string) (config.ClusterInfo, error) {
+	var ci config.ClusterInfo
+	query := `SELECT id, clusterId, name, username, password, port, majVersion, minVersion, FROM clusterInfo WHERE clusterId = ? LIMIT 1`
+	err := db.Client.QueryRow(query, clusterId).Scan(
+		&ci.ID,
+		&ci.ClusterID,
+		&ci.Name,
+		&ci.Username,
+		&ci.Password,
+		&ci.Port,
+		&ci.MajVersion,
+		&ci.MinVersion,
+	)
+	ci.Host = "localhost" // filled since we don't save the host yet.
+	return ci, err
 }

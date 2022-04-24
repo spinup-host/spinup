@@ -48,7 +48,7 @@ func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
-	clustersInfo, err := metastore.ClustersInfo(c.db)
+	clustersInfo, err := metastore.AllClusters(c.db)
 	if err != nil {
 		log.Println("ERROR: reading from clusterInfo table: ", err)
 		http.Error(w, "reading from clusterInfo", http.StatusUnauthorized)
@@ -91,7 +91,7 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ci, err := getClusterFromDb(c.db, clusterId)
+	ci, err := metastore.GetClusterByID(c.db, clusterId)
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println(err)
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
@@ -117,15 +117,3 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getClusterFromDb(db metastore.Db, clusterId string) (config.ClusterInfo, error) {
-	var ci config.ClusterInfo
-	query := `SELECT id, clusterId, name, username, port FROM clusterInfo WHERE clusterId = ? LIMIT 1`
-	err := db.Client.QueryRow(query, clusterId).Scan(
-		&ci.ID,
-		&ci.ClusterID,
-		&ci.Name,
-		&ci.Username,
-		&ci.Port,
-	)
-	return ci, err
-}
