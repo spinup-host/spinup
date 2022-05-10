@@ -97,7 +97,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	dowInt, _ := strconv.Atoi(dow)
 
 	insertSql := "insert into backup(clusterId, destination, bucket, second, minute, hour, dom, month, dow) values(?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	if err := metastore.InsertBackupIntoMeta(
+	if err := metastore.InsertBackup(
 		db,
 		insertSql,
 		s.Db.ID,
@@ -136,7 +136,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
-	cis, err := metastore.ClustersInfo(db)
+	cis, err := metastore.AllClusters(db)
 	if err != nil {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return

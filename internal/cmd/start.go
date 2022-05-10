@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt"
@@ -87,16 +88,22 @@ func startCmd() *cobra.Command {
 			}
 			log.Println(fmt.Sprintf("INFO: Using config file: %s", cfgFile))
 			if err := validateConfig(cfgFile); err != nil {
-				log.Fatal("FATAL : Validating Config %v", err)
+				log.Fatalf("FATAL: failed to validate config: %v", err)
 			}
 			log.Println("INFO: Initial Validations successful")
 			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
 
+			dockerClient, err := dockerservice.NewDocker()
+			if err != nil {
+				utils.Logger.Error("could not create docker client", zap.Error(err))
+			}
+			ctx := context.TODO()
+			_, err = dockerClient.CreateNetwork(ctx, config.DefaultNetworkName, types.NetworkCreate{CheckDuplicate: true})
+			if err != nil {
+				utils.Logger.Fatal("unable to create docker network", zap.Error(err))
+			}
+
 			if config.Cfg.Common.Monitoring {
-				dockerClient, err := dockerservice.NewDocker()
-				if err != nil {
-					utils.Logger.Error("could not create docker client", zap.Error(err))
-				}
 				monitorRuntime = monitor.NewRuntime(dockerClient, utils.Logger)
 				if err := monitorRuntime.BootstrapServices(); err != nil {
 					utils.Logger.Error("could not start monitoring services", zap.Error(err))
