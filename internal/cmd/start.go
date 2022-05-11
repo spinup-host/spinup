@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -100,7 +101,11 @@ func startCmd() *cobra.Command {
 			ctx := context.TODO()
 			_, err = dockerClient.CreateNetwork(ctx, config.DefaultNetworkName, types.NetworkCreate{CheckDuplicate: true})
 			if err != nil {
-				utils.Logger.Fatal("unable to create docker network", zap.Error(err))
+				if errors.Is(err, dockerservice.ErrDuplicateNetwork) {
+					utils.Logger.Fatal(fmt.Sprintf("found multiple docker networks with name: '%s', remove them and restart Spinup.", config.DefaultNetworkName))
+				} else {
+					utils.Logger.Fatal("unable to create docker network", zap.Error(err))
+				}
 			}
 
 			if config.Cfg.Common.Monitoring {

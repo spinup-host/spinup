@@ -20,6 +20,8 @@ type Docker struct {
 	Cli *client.Client
 }
 
+var ErrDuplicateNetwork = errors.New("duplicate networks found with given name")
+
 // GetContainer returns a docker container with the provided name (if any exists).
 // if no match exists, it returns a nil container and a nil error.
 func (d Docker) GetContainer(ctx context.Context, name string) (*Container, error) {
@@ -40,8 +42,8 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 			}
 
 			c := &Container{
-				ID:   match.ID,
-				Name: name,
+				ID:     match.ID,
+				Name:   name,
 				Config: *data.Config,
 				NetworkConfig: network.NetworkingConfig{
 					EndpointsConfig: data.NetworkSettings.Networks,
@@ -70,10 +72,10 @@ func (d Docker) CreateNetwork(ctx context.Context, name string, opt types.Networ
 			return networkResponse, err
 		}
 
-		if len(networks) > 0 {
+		if len(networks) > 1 {
 			// multiple networks with the same name exists.
 			// we return an error and let the user clean them out
-			return networkResponse, fmt.Errorf("found multiple networks with name: '%s'. Remove the networks and restart Spinup", name)
+			return networkResponse, ErrDuplicateNetwork
 		}
 		return types.NetworkCreateResponse{
 			ID: networks[0].ID,
