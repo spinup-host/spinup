@@ -22,21 +22,12 @@ if [ -z "$SPINUP_API_KEY" ]; then
 fi
 
 SPINUP_DIR=${SPINUP_DIR:-"${HOME}/.local/spinup"}
-
-if [ -z "$API_VERSION" ]; then
+if [ -z "$VERSION" ]; then
   echo "Fetching latest Spinup version..."
     SPINUP_VERSION=$(curl --silent "https://api.github.com/repos/spinup-host/spinup/releases" | jq -r 'first | .tag_name')
 else
-  SPINUP_VERSION=$API_VERSION
+  SPINUP_VERSION=$VERSION
 fi
-
-if [ -z "$UI_VERSION" ]; then
-  echo "Fetching latest Spinup version..."
-    SPINUP_UI_VERSION=main
-else
-  SPINUP_UI_VERSION=$UI_VERSION
-fi
-
 
 OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
@@ -55,7 +46,7 @@ go build -o spinup-backend ./main.go
 ./spinup-backend version
 cp ${SPINUP_TMP_DIR}/spinup-api/spinup-backend ${SPINUP_DIR}/spinup
 
-git clone --depth=1 --branch=${UI_VERSION} https://github.com/spinup-host/spinup-dash.git ${SPINUP_TMP_DIR}/spinup-dash
+git clone --depth=1 https://github.com/spinup-host/spinup-dash.git ${SPINUP_TMP_DIR}/spinup-dash
 cd ${SPINUP_TMP_DIR}/spinup-dash
 # setup env variables for dashboard's npm build
 cat >.env <<-EOF
