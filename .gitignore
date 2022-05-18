@@ -6,3 +6,6 @@ app.rsa.pub
 spinup-host
 config.yaml
 testuser
+prom_data
+metastore.db
+prometheus.yml
