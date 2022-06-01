@@ -11,7 +11,7 @@ We are currently using Github Authentication. We should be able to support other
 
 Currently we only support Postgres dbms, but we should be able to support other open source databases like [MySQL](https://www.mysql.com/), [MariaDB](https://mariadb.org/) etc.
 
-![architecture](architecture.jpeg)
+![architecture](architecture.png)
 ## Installation
 ### Linux
 To get started with Spinup on Linux:
