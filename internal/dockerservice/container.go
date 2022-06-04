@@ -51,7 +51,7 @@ func NewContainer(name string, config container.Config, hostConfig container.Hos
 	}
 }
 
-// Start starts a docker container. If the base image doesn't exist locally, we attempt to pull it from
+// Start creates and starts a docker container. If the base image doesn't exist locally, we attempt to pull it from
 // the docker registry.
 func (c *Container) Start(ctx context.Context, d Docker) (container.ContainerCreateCreatedBody, error) {
 	body := container.ContainerCreateCreatedBody{}
@@ -89,6 +89,16 @@ func (c *Container) Start(ctx context.Context, d Docker) (container.ContainerCre
 
 	log.Printf("started %s container with ID: %s", c.Name, c.ID)
 	return body, nil
+}
+
+// StartExisting starts a docker container. Unlike Start(), this method only concerns itself with starting a container
+// and will not try to create it or pull the image.
+func (c *Container) StartExisting(ctx context.Context, d Docker) error {
+	err := d.Cli.ContainerStart(ctx, c.ID, c.Options)
+	if err != nil {
+		return errors.Wrapf(err, "unable to start container %s", c.ID)
+	}
+	return nil
 }
 
 // imageExistsLocally returns a boolean indicating if an image with the
