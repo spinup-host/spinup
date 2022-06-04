@@ -162,7 +162,6 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 			// todo: find a way to send "info" messages to the client without making them an error
 			log.Println("monitoring services are not running, Spinup will start them in the background")
 		}
-		return
 	}
 
 	serviceResponse := config.ClusterInfo{

@@ -85,6 +85,10 @@ func (r *Runtime) BootstrapServices() error {
 		// if the container exists, we only update the host address without over-writing the existing prometheus config
 		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[config.DefaultNetworkName].Gateway
 		r.logger.Info("reusing existing prometheus container")
+		err = promContainer.StartExisting(ctx, r.dockerClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to start existing prometheus container")
+		}
 	}
 
 	pgExporterContainer, err = r.dockerClient.GetContainer(ctx, PgExporterContainerName)
@@ -102,6 +106,10 @@ func (r *Runtime) BootstrapServices() error {
 		}
 	} else {
 		r.logger.Info("reusing existing postgres_exporter container")
+		err = pgExporterContainer.StartExisting(ctx, r.dockerClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to start existing pg_exporter container")
+		}
 	}
 
 	r.logger.Info(fmt.Sprintf("using docker host address :%s", r.dockerHostAddr))
