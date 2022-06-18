@@ -110,7 +110,7 @@ func startCmd() *cobra.Command {
 
 			if config.Cfg.Common.Monitoring {
 				monitorRuntime = monitor.NewRuntime(dockerClient, utils.Logger)
-				if err := monitorRuntime.BootstrapServices(); err != nil {
+				if err := monitorRuntime.BootstrapServices(ctx); err != nil {
 					utils.Logger.Error("could not start monitoring services", zap.Error(err))
 				} else {
 					utils.Logger.Info("started spinup monitoring services")

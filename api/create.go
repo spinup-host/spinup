@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -143,18 +144,19 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		} else {
 			// this might take more time especially if the image doesn't exist locally, so we wrap it in a goroutine
 			go func() {
+				ctx := context.Background()
 				dockerClient, err := dockerservice.NewDocker()
 				if err != nil {
 					log.Printf("error creating client %v", err)
 					return
 				}
 				c.monitor = monitor.NewRuntime(dockerClient, utils.Logger)
-				if err := c.monitor.BootstrapServices(); err != nil {
+				if err := c.monitor.BootstrapServices(ctx); err != nil {
 					log.Println(err)
 				} else {
 					log.Println("started monitoring services")
 				}
-				if err = c.monitor.AddTarget(req.Context(), target); err != nil {
+				if err = c.monitor.AddTarget(ctx, target); err != nil {
 					log.Printf("ERROR: setting up monitoring for service: %v", err)
 				}
 			}()

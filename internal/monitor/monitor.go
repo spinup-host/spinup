@@ -36,11 +36,10 @@ type Target struct {
 
 // BootstrapServices starts up prometheus and exporter services in docker containers
 // todo: clean up started services on SIGKILL or SIGTERM
-func (r *Runtime) BootstrapServices() error {
+func (r *Runtime) BootstrapServices(ctx context.Context) error {
 	var err error
 	var promContainer *dockerservice.Container
 	var pgExporterContainer *dockerservice.Container
-	ctx := context.TODO()
 
 	defer func() {
 		if err != nil {
