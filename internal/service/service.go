@@ -78,7 +78,6 @@ func (svc Service) CreateService(ctx context.Context, info *metastore.ClusterInf
 		utils.Logger.Warn("container may be unhealthy", zap.Strings("warnings", body.Warnings))
 	}
 	info.ClusterID = body.ID
-	utils.Logger.Info("created postgres container", zap.String("container ID", info.ClusterID))
 
 	if err := metastore.InsertService(svc.store, *info); err != nil {
 		return errors.Wrap(err, "saving cluster info to store")

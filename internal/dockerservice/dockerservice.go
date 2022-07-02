@@ -67,8 +67,8 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 }
 
 // CreateNetwork creates a new Docker network.
-func (d Docker) CreateNetwork(ctx context.Context, name string, opt types.NetworkCreate) (types.NetworkCreateResponse, error) {
-	networkResponse, err := d.Cli.NetworkCreate(ctx, name, opt)
+func (d Docker) CreateNetwork(ctx context.Context, name string) (types.NetworkCreateResponse, error) {
+	networkResponse, err := d.Cli.NetworkCreate(ctx, name, types.NetworkCreate{CheckDuplicate: true})
 	if err == nil {
 		return networkResponse, nil
 	}

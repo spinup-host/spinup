@@ -77,6 +77,12 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "provided database type is not supported", http.StatusBadRequest)
 		return
 	}
+	s.Db.Port, err = misc.Portcheck()
+	if err != nil {
+		log.Printf("ERROR: port issue for %s %v", s.UserID, err)
+		http.Error(w, "port issue", 500)
+		return
+	}
 	s.Architecture = config.Cfg.Common.Architecture
 
 	cluster := metastore.ClusterInfo{

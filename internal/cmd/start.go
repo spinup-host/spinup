@@ -18,7 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt"
@@ -104,7 +103,7 @@ func startCmd() *cobra.Command {
 				utils.Logger.Error("could not create docker client", zap.Error(err))
 			}
 			ctx := context.TODO()
-			_, err = dockerClient.CreateNetwork(ctx, dockerClient.NetworkName, types.NetworkCreate{CheckDuplicate: true})
+			_, err = dockerClient.CreateNetwork(ctx, dockerClient.NetworkName)
 			if err != nil {
 				if errors.Is(err, dockerservice.ErrDuplicateNetwork) {
 					utils.Logger.Fatal(fmt.Sprintf("found multiple docker networks with name: '%s', remove them and restart Spinup.", dockerClient.NetworkName))
