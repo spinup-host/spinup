@@ -121,8 +121,17 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		misc.ErrorResponse(w, "error accessing sqlite database", 500)
 		return
 	}
-	insertSql := "insert into clusterInfo(clusterId, name, username, password, port, majVersion, minVersion) values(?, ?, ?, ?, ?, ?, ?)"
-	if err := metastore.InsertService(db, insertSql, postgresContainer.ID, s.Db.Name, s.Db.Username, s.Db.Password, s.Db.Port, int(s.Version.Maj), int(s.Version.Min)); err != nil {
+	cluster := config.ClusterInfo{
+		Host: "localhost",
+		ClusterID: postgresContainer.ID,
+		Name: s.Db.Name,
+		Username: s.Db.Username,
+		Password: s.Db.Password,
+		Port: s.Db.Port,
+		MajVersion: int(s.Version.Maj),
+		MinVersion: int(s.Version.Min),
+	}
+	if err := metastore.InsertService(db, cluster); err != nil {
 		log.Printf("ERROR: executing insert into cluster info table %v", err)
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
@@ -166,17 +175,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		}
 	}
 
-	serviceResponse := config.ClusterInfo{
-		Host:       "localhost",
-		ClusterID:  postgresContainer.ID,
-		Name:       s.Db.Name,
-		Port:       s.Db.Port,
-		Username:   s.Db.Username,
-		Password:   s.Db.Password,
-		MajVersion: int(s.Version.Maj),
-		MinVersion: int(s.Version.Min),
-	}
-	jsonBody, err := json.Marshal(serviceResponse)
+	jsonBody, err := json.Marshal(cluster)
 	if err != nil {
 		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
 		http.Error(w, "Internal server error ", 500)
