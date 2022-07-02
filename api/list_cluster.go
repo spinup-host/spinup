@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/spinup-host/spinup/internal/monitor"
+	"github.com/spinup-host/spinup/internal/dockerservice"
 	"io/fs"
 	"log"
 	"net/http"
@@ -12,6 +12,8 @@ import (
 
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
+	"github.com/spinup-host/spinup/internal/monitor"
+	"github.com/spinup-host/spinup/internal/service"
 
 	_ "modernc.org/sqlite"
 )
@@ -19,9 +21,10 @@ import (
 type ClusterHandler struct {
 	db      metastore.Db
 	monitor *monitor.Runtime
+	svc service.Service
 }
 
-func NewClusterHandler(monitor *monitor.Runtime) (ClusterHandler, error) {
+func NewClusterHandler(client dockerservice.Docker, monitor *monitor.Runtime) (ClusterHandler, error) {
 	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
@@ -30,6 +33,7 @@ func NewClusterHandler(monitor *monitor.Runtime) (ClusterHandler, error) {
 	return ClusterHandler{
 		db:      db,
 		monitor: monitor,
+		svc: service.NewService(client, db, monitor),
 	}, nil
 }
 

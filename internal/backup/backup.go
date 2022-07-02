@@ -24,8 +24,10 @@ import (
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/postgres"
+	"github.com/spinup-host/spinup/internal/service"
 	"github.com/spinup-host/spinup/misc"
 	"github.com/spinup-host/spinup/utils"
+
 	"go.uber.org/zap"
 )
 
@@ -52,7 +54,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
-	var s config.Service
+	var s service.ServiceInfo
 	byteArray, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		utils.Logger.Error("Error Occured", zap.Error(err))
@@ -208,7 +210,7 @@ func (l logicError) Error() string {
 	return fmt.Sprintf("logic error %v", l.err)
 }
 
-func backupDataValidation(s *config.Service) error {
+func backupDataValidation(s *service.ServiceInfo) error {
 	if !s.BackupEnabled {
 		return logicError{err: errors.New("backup is not enabled")}
 	}
@@ -220,9 +222,6 @@ func backupDataValidation(s *config.Service) error {
 	}
 	if s.Backup.Dest.BucketName == "" {
 		return errors.New("bucket name is mandatory")
-	}
-	if s.UserID == "" {
-		s.UserID = "testuser"
 	}
 	return nil
 }

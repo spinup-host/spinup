@@ -48,7 +48,12 @@ var (
 )
 
 func apiHandler() http.Handler {
-	ch, err := api.NewClusterHandler(monitorRuntime)
+	dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
+	if err != nil {
+		utils.Logger.Error("could not create docker client", zap.Error(err))
+	}
+
+	ch, err := api.NewClusterHandler(dockerClient, monitorRuntime)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
@@ -94,15 +99,15 @@ func startCmd() *cobra.Command {
 			log.Println("INFO: Initial Validations successful")
 			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
 
-			dockerClient, err := dockerservice.NewDocker()
+			dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
 			if err != nil {
 				utils.Logger.Error("could not create docker client", zap.Error(err))
 			}
 			ctx := context.TODO()
-			_, err = dockerClient.CreateNetwork(ctx, config.DefaultNetworkName, types.NetworkCreate{CheckDuplicate: true})
+			_, err = dockerClient.CreateNetwork(ctx, dockerClient.NetworkName, types.NetworkCreate{CheckDuplicate: true})
 			if err != nil {
 				if errors.Is(err, dockerservice.ErrDuplicateNetwork) {
-					utils.Logger.Fatal(fmt.Sprintf("found multiple docker networks with name: '%s', remove them and restart Spinup.", config.DefaultNetworkName))
+					utils.Logger.Fatal(fmt.Sprintf("found multiple docker networks with name: '%s', remove them and restart Spinup.", dockerClient.NetworkName))
 				} else {
 					utils.Logger.Fatal("unable to create docker network", zap.Error(err))
 				}

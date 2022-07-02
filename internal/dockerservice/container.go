@@ -13,22 +13,11 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
 )
 
 var ErrNoMatchingEnv = fmt.Errorf("no matching environment variable")
-
-// NewDocker returns a Docker struct
-func NewDocker(opts ...client.Opt) (Docker, error) {
-	cli, err := client.NewClientWithOpts(opts...)
-	if err != nil {
-		fmt.Printf("error creating client %v", err)
-	}
-	//TODO: Check. Does this initialize and assign
-	return Docker{Cli: cli}, nil
-}
 
 // Container represents a docker container
 type Container struct {

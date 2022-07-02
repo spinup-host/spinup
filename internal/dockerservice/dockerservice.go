@@ -18,6 +18,17 @@ import (
 
 type Docker struct {
 	Cli *client.Client
+	NetworkName string
+}
+
+// NewDocker returns a Docker struct
+func NewDocker(networkName string, opts ...client.Opt) (Docker, error) {
+	cli, err := client.NewClientWithOpts(opts...)
+	if err != nil {
+		fmt.Printf("error creating client %v", err)
+	}
+	//TODO: Check. Does this initialize and assign
+	return Docker{NetworkName: networkName, Cli: cli}, nil
 }
 
 var ErrDuplicateNetwork = errors.New("duplicate networks found with given name")

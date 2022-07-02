@@ -29,3 +29,9 @@ func respond(statusCode int, w http.ResponseWriter, data interface{}) {
 		return
 	}
 }
+
+func Hello(w http.ResponseWriter, req *http.Request) {
+	respond(200, w, map[string]string{
+		"message": "Welcome to Spinup!",
+	})
+}

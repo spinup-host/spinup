@@ -4,11 +4,9 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt"
 	"log"
 	"strings"
-	"time"
-
-	"github.com/golang-jwt/jwt"
 )
 
 const (
@@ -33,49 +31,6 @@ type Configuration struct {
 }
 
 var Cfg Configuration
-
-type Service struct {
-	Duration time.Duration
-	UserID   string
-	// one of arm64v8 or arm32v7 or amd64
-	Architecture string
-	//Port         uint
-	Db            dbCluster
-	DockerNetwork string
-	Version       version
-	BackupEnabled bool
-	Backup        backupConfig
-}
-
-type version struct {
-	Maj uint
-	Min uint
-}
-type dbCluster struct {
-	Name     string
-	ID       string
-	Type     string
-	Port     int
-	Username string
-	Password string
-
-	Memory     int64
-	CPU        int64
-	Monitoring string
-}
-
-type backupConfig struct {
-	// https://man7.org/linux/man-pages/man5/crontab.5.html
-	Schedule map[string]interface{}
-	Dest     Destination `json:"Dest"`
-}
-
-type Destination struct {
-	Name         string
-	BucketName   string
-	ApiKeyID     string
-	ApiKeySecret string
-}
 
 type ClusterInfo struct {
 	Host       string `json:"host"`

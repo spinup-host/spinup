@@ -76,13 +76,13 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 
 		// we expect all containers to have the same gateway IP, but we assign it here
 		// so that we can update the prometheus config with the right IP of targets
-		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[config.DefaultNetworkName].Gateway
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 		if err = r.writePromConfig(promCfgPath); err != nil {
 			return errors.Wrap(err, "failed to update prometheus config")
 		}
 	} else {
 		// if the container exists, we only update the host address without over-writing the existing prometheus config
-		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[config.DefaultNetworkName].Gateway
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 		r.logger.Info("reusing existing prometheus container")
 		err = promContainer.StartExisting(ctx, r.dockerClient)
 		if err != nil {
@@ -119,7 +119,7 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 
 func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Container, error) {
 	endpointConfig := map[string]*network.EndpointSettings{}
-	endpointConfig[config.DefaultNetworkName] = &network.EndpointSettings{}
+	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	image := "quay.io/prometheuscommunity/postgres-exporter"
 	env := []string{
@@ -148,7 +148,7 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 
 func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Container, error) {
 	endpointConfig := map[string]*network.EndpointSettings{}
-	endpointConfig[config.DefaultNetworkName] = &network.EndpointSettings{}
+	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	image := "bitnami/prometheus"
 

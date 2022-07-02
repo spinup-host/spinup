@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 
-	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/misc"
 )
@@ -32,12 +31,8 @@ type ContainerProps struct {
 	CPUShares int64
 }
 
-func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice.Container, err error) {
-	dockerClient, err := dockerservice.NewDocker()
-	if err != nil {
-		fmt.Printf("error creating client %v", err)
-	}
-	newVolume, err := dockerservice.CreateVolume(context.Background(), dockerClient, volume.VolumeCreateBody{
+func NewPostgresContainer(client dockerservice.Docker, props ContainerProps) (postgresContainer dockerservice.Container, err error) {
+	newVolume, err := dockerservice.CreateVolume(context.Background(), client, volume.VolumeCreateBody{
 		Driver: "local",
 		Labels: map[string]string{"purpose": "postgres data"},
 		Name:   props.Name,
@@ -48,7 +43,7 @@ func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice
 	// defer for cleaning volume removal
 	defer func() {
 		if err != nil {
-			if errVolRemove := dockerservice.RemoveVolume(context.Background(), dockerClient, newVolume.Name); errVolRemove != nil {
+			if errVolRemove := dockerservice.RemoveVolume(context.Background(), client, newVolume.Name); errVolRemove != nil {
 				err = fmt.Errorf("error removing volume during failed service creation %w", err)
 			}
 		}
@@ -88,10 +83,8 @@ func NewPostgresContainer(props ContainerProps) (postgresContainer dockerservice
 		},
 	}
 
-	// we attach all created services to the same docker network
-	networkName := config.DefaultNetworkName
 	endpointConfig := map[string]*network.EndpointSettings{}
-	endpointConfig[networkName] = &network.EndpointSettings{}
+	endpointConfig[client.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 
 	env := []string{
