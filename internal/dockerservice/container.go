@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -16,6 +17,8 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
 )
+
+var ErrNoMatchingEnv = fmt.Errorf("no matching environment variable")
 
 // NewDocker returns a Docker struct
 func NewDocker(opts ...client.Opt) (Docker, error) {
@@ -189,3 +192,18 @@ func (c *Container) Remove(ctx context.Context, d Docker) error {
 	return d.Cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
 }
 
+// GetEnv returns the value of an environment value in the container or an error if no match is found.
+func(c *Container) GetEnv(ctx context.Context, d Docker, key string) (string, error) {
+	var value string
+	var found bool
+	for _, e := range c.Config.Env {
+		if strings.Contains(e, key) {
+			_, value, found = strings.Cut(e, "=")
+		}
+	}
+
+	if value == "" && !found {
+		return "", ErrNoMatchingEnv
+	}
+	return value, nil
+}

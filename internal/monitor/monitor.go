@@ -122,9 +122,8 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 	endpointConfig[config.DefaultNetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	image := "quay.io/prometheuscommunity/postgres-exporter"
-	var env []string
-	if dsn != "" {
-		env = append(env, misc.StringToDockerEnvVal("DATA_SOURCE_NAME", dsn))
+	env := []string{
+		misc.StringToDockerEnvVal("DATA_SOURCE_NAME", dsn),
 	}
 
 	metricsPort := nat.Port("9187/tcp")

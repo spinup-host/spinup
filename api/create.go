@@ -103,7 +103,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	}
 	body, err := postgresContainer.Start(req.Context(), dockerClient)
 	if err != nil {
-		log.Printf("ERROR: starting new docker service for %s %v", s.UserID, err)
+		utils.Logger.Error("failed to start postgres container", zap.Error(err))
 		http.Error(w, "Error starting postgres docker service", 500)
 		return
 	}
@@ -179,11 +179,10 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	jsonBody, err := json.Marshal(serviceResponse)
 	if err != nil {
 		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
-		http.Error(w, "Internal server error ", 500)
-		return
+		misc.ErrorResponse(w, "Internal server error ", 500)
+	} else {
+		w.Header().Set("Content-type", "application/json")
+		w.Write(jsonBody)
 	}
-
-	w.Header().Set("Content-type", "application/json")
-	w.Write(jsonBody)
 	return
 }
