@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"github.com/spinup-host/spinup/config"
-	"github.com/spinup-host/spinup/internal/service"
+	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/misc"
 	"github.com/spinup-host/spinup/utils"
 	"go.uber.org/zap"
@@ -12,6 +12,36 @@ import (
 	_ "modernc.org/sqlite"
 	"net/http"
 )
+
+// Service is used to parse request from JSON payload
+// todo merge with metastore.ClusterInfo
+type Service struct {
+	UserID   string
+	// one of arm64v8 or arm32v7 or amd64
+	Architecture string
+	//Port         uint
+	Db            dbCluster
+	DockerNetwork string
+	Version       version
+}
+
+type version struct {
+	Maj uint
+	Min uint
+}
+type dbCluster struct {
+	Name     string
+	ID       string
+	Type     string
+	Port     int
+	Username string
+	Password string
+
+	Memory     int64
+	CPU        int64
+	Monitoring string
+}
+
 
 func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) {
 	if (*req).Method != "POST" {
@@ -27,7 +57,8 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
-	var s service.ServiceInfo
+	var s Service
+
 	byteArray, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		utils.Logger.Error("error reading request body", zap.Error(err))
@@ -48,21 +79,23 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	}
 	s.Architecture = config.Cfg.Common.Architecture
 
-	if err := c.svc.CreateService(req.Context(), &s); err != nil {
+	cluster := metastore.ClusterInfo{
+		Architecture: s.Architecture,
+		Type: s.Db.Type,
+		Host: "localhost",
+		Name: s.Db.Name,
+		Username: s.Db.Username,
+		Password: s.Db.Password,
+		Port: s.Db.Port,
+		MajVersion: int(s.Version.Maj),
+		MinVersion: int(s.Version.Min),
+		Monitoring: s.Db.Monitoring,
+	}
+	if err := c.svc.CreateService(req.Context(), &cluster); err != nil {
 		utils.Logger.Error("failed to add create service", zap.Error(err))
 	}
 
-	serviceResponse := config.ClusterInfo{
-		Host:       "localhost",
-		ClusterID:  s.Db.ID,
-		Name:       s.Db.Name,
-		Port:       s.Db.Port,
-		Username:   s.Db.Username,
-		Password:   s.Db.Password,
-		MajVersion: int(s.Version.Maj),
-		MinVersion: int(s.Version.Min),
-	}
-	jsonBody, err := json.Marshal(serviceResponse)
+	jsonBody, err := json.Marshal(cluster)
 	if err != nil {
 		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
 		misc.ErrorResponse(w, "Internal server error ", 500)

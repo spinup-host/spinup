@@ -32,18 +32,6 @@ type Configuration struct {
 
 var Cfg Configuration
 
-type ClusterInfo struct {
-	Host       string `json:"host"`
-	ID         int    `json:"id"`
-	ClusterID  string `json:"cluster_id"`
-	Name       string `json:"name"`
-	Port       int    `json:"port"`
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	MajVersion int    `json:"majversion"`
-	MinVersion int    `json:"minversion"`
-}
-
 func ValidateUser(authHeader string, apiKeyHeader string) (string, error) {
 	if authHeader == "" && apiKeyHeader == "" {
 		return "", errors.New("no authorization keys found")

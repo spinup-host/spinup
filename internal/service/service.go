@@ -13,28 +13,17 @@ import (
 )
 
 type Service struct {
-	store metastore.Db
-	dockerClient dockerservice.Docker
+	store          metastore.Db
+	dockerClient   dockerservice.Docker
 	monitorRuntime *monitor.Runtime
 }
 
-func NewService(client dockerservice.Docker, store metastore.Db, mr *monitor.Runtime ) Service {
+func NewService(client dockerservice.Docker, store metastore.Db, mr *monitor.Runtime) Service {
 	return Service{
-		store: store,
-		dockerClient: client,
+		store:          store,
+		dockerClient:   client,
 		monitorRuntime: mr,
 	}
-}
-
-type ServiceInfo struct {
-	// one of arm64v8 or arm32v7 or amd64
-	Architecture string
-	//Port         uint
-	Db            DbCluster
-	DockerNetwork string
-	Version       Version
-	BackupEnabled bool
-	Backup        backupConfig
 }
 
 type Version struct {
@@ -48,10 +37,6 @@ type DbCluster struct {
 	Port     int
 	Username string
 	Password string
-
-	Memory     int64
-	CPU        int64
-	Monitoring string
 }
 
 type backupConfig struct {
@@ -67,16 +52,16 @@ type Destination struct {
 	ApiKeySecret string
 }
 
-func (svc Service) CreateService(ctx context.Context, info *ServiceInfo) error {
-	image := fmt.Sprintf("%s/%s:%d.%d", info.Architecture, info.Db.Type, info.Version.Maj, info.Version.Min)
+func (svc Service) CreateService(ctx context.Context, info *metastore.ClusterInfo) error {
+	image := fmt.Sprintf("%s/%s:%d.%d", "amd64", "postgres", info.MajVersion, info.MinVersion)
 
 	postgresContainerProp := postgres.ContainerProps{
-		Name:      info.Db.Name,
-		Username:  info.Db.Username,
-		Password:  info.Db.Password,
-		Port:      info.Db.Port,
-		Memory:    info.Db.Memory,
-		CPUShares: info.Db.CPU,
+		Name:      info.Name,
+		Username:  info.Username,
+		Password:  info.Password,
+		Port:      info.Port,
+		Memory:    info.Memory,
+		CPUShares: info.CPU,
 		Image:     image,
 	}
 
@@ -92,21 +77,19 @@ func (svc Service) CreateService(ctx context.Context, info *ServiceInfo) error {
 	if len(body.Warnings) != 0 {
 		utils.Logger.Warn("container may be unhealthy", zap.Strings("warnings", body.Warnings))
 	}
-	pgContainer.ID = body.ID
-	pgContainer.Warning = body.Warnings
-	utils.Logger.Info("created postgres container", zap.String("container ID", pgContainer.ID))
+	info.ClusterID = body.ID
+	utils.Logger.Info("created postgres container", zap.String("container ID", info.ClusterID))
 
-	insertSql := "insert into clusterInfo(clusterId, name, username, password, port, majVersion, minVersion) values(?, ?, ?, ?, ?, ?, ?)"
-	if err := metastore.InsertService(svc.store, insertSql, pgContainer.ID, info.Db.Name, info.Db.Username, info.Db.Password, info.Db.Port, int(info.Version.Maj), int(info.Version.Min)); err != nil {
+	if err := metastore.InsertService(svc.store, *info); err != nil {
 		return errors.Wrap(err, "saving cluster info to store")
 	}
 
-	if info.Db.Monitoring == "enable" {
+	if info.Monitoring == "enable" {
 		target := &monitor.Target{
 			ContainerName: pgContainer.Name,
-			UserName:      info.Db.Username,
-			Password:      info.Db.Password,
-			Port:          info.Db.Port,
+			UserName:      info.Username,
+			Password:      info.Password,
+			Port:          info.Port,
 		}
 		go func(target *monitor.Target) {
 			// we use a background context since this is a goroutine and the orignal request

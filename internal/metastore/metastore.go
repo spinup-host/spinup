@@ -7,36 +7,67 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/spinup-host/spinup/config"
+	_ "modernc.org/sqlite"
 )
 
 type Db struct {
 	Client *sql.DB
 }
 
+type ClusterInfo struct {
+	// one of arm64v8 or arm32v7 or amd64
+	Architecture string `json:"architecture,omitempty"`
+
+	Type       string `json:"type"` // only "postgres" is supported at the moment
+	Host       string `json:"host"`
+	ID         int    `json:"id,omitempty"`
+	ClusterID  string `json:"cluster_id"`
+	Name       string `json:"name"`
+	Port       int    `json:"port"`
+	Username   string `json:"username"`
+	Password   string `json:"password,omitempty"`
+	MajVersion int    `json:"majversion"`
+	MinVersion int    `json:"minversion"`
+	Monitoring string `json:"monitoring,omitempty"`
+	CPU        int64  `json:"cpu,omitempty"`
+	Memory     int64  `json:"memory,omitempty"`
+
+	BackupEnabled bool         `json:"backup_enabled,omitempty"`
+	Backup        backupConfig `json:"backup,omitempty"`
+}
+
+type backupConfig struct {
+	// https://man7.org/linux/man-pages/man5/crontab.5.html
+	Schedule map[string]interface{}
+	Dest     Destination `json:"Dest"`
+}
+
+type Destination struct {
+	Name         string
+	BucketName   string
+	ApiKeyID     string
+	ApiKeySecret string
+}
+
 // clustersInfo type has methods which provide us to filter them by name etc.
-type clustersInfo []config.ClusterInfo
+type clustersInfo []ClusterInfo
 
 // FilterByName filters cluster by name. Since cluster names are unique as soon as we find a match we return
-func (c clustersInfo) FilterByName(name string) (config.ClusterInfo, error) {
+func (c clustersInfo) FilterByName(name string) (ClusterInfo, error) {
 	for _, clusterInfo := range c {
 		if clusterInfo.Name == name {
 			return clusterInfo, nil
 		}
 	}
-	return config.ClusterInfo{}, errors.New("cluster not found")
+	return ClusterInfo{}, errors.New("cluster not found")
 }
 
 func NewDb(path string) (Db, error) {
-	db, err := open(path)
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return Db{}, fmt.Errorf("unable to create a new db sqlite db client %w", err)
 	}
 	return Db{Client: db}, nil
-}
-
-func open(path string) (*sql.DB, error) {
-	return sql.Open("sqlite", path)
 }
 
 // migration creates table
@@ -63,8 +94,10 @@ func migration(ctx context.Context, db Db) error {
 	return nil
 }
 
-//TODO: How to write generic functions with varying fields and types? Maybe generics
-func InsertService(db Db, sql, clusterId, name, username, password string, port, majVersion, minVersion int) error {
+// InsertService adds a new row containing the cluster/service info to the database.
+// TODO: How to write generic functions with varying fields and types? Maybe generics
+func InsertService(db Db, cluster ClusterInfo) error {
+	query := "insert into clusterInfo(clusterId, name, username, password, port, majVersion, minVersion) values(?, ?, ?, ?, ?, ?, ?)"
 	tx, err := db.Client.Begin()
 	if err != nil {
 		return fmt.Errorf("unable to begin a transaction %w", err)
@@ -72,12 +105,14 @@ func InsertService(db Db, sql, clusterId, name, username, password string, port,
 	if err = migration(context.Background(), db); err != nil {
 		return fmt.Errorf("error running a migration %w", err)
 	}
-	res, err := tx.ExecContext(context.Background(), sql, clusterId, name, username, password, port, majVersion, minVersion)
+	_, err = tx.ExecContext(context.Background(), query, cluster.ClusterID, cluster.Name, cluster.Username, cluster.Password, cluster.Port, cluster.MajVersion, cluster.MinVersion)
 	if err != nil {
-		return fmt.Errorf("unable to execute %s %v", sql, err)
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			log.Println("ERROR: failed to rollback transaction: ", rollbackErr)
+		}
+		return fmt.Errorf("unable to execute %s %v", query, err)
 	}
-	rows, _ := res.RowsAffected()
-	log.Println("INFO: rows inserted into clusterInfo table:", rows)
+
 	err = tx.Commit()
 	if err != nil {
 		return err
@@ -117,7 +152,7 @@ func AllClusters(db Db) (clustersInfo, error) {
 	}
 	defer rows.Close()
 	var csi clustersInfo
-	var cluster config.ClusterInfo
+	var cluster ClusterInfo
 	for rows.Next() {
 		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Password, &cluster.Port, &cluster.MajVersion, &cluster.MinVersion)
 		if err != nil {
@@ -129,10 +164,10 @@ func AllClusters(db Db) (clustersInfo, error) {
 	return csi, nil
 }
 
-// GetClusterByID returns info about the service whose cluster ID is provided.
-func GetClusterByID(db Db, clusterId string) (config.ClusterInfo, error) {
-	var ci config.ClusterInfo
-	query := `SELECT id, clusterId, name, username, password, port, majVersion, minVersion, FROM clusterInfo WHERE clusterId = ? LIMIT 1`
+// GetClusterByID returns info about the cluster whose ID is provided.
+func GetClusterByID(db Db, clusterId string) (ClusterInfo, error) {
+	var ci ClusterInfo
+	query := `SELECT id, clusterId, name, username, password, port, majVersion, minVersion FROM clusterInfo WHERE clusterId = ? LIMIT 1`
 	err := db.Client.QueryRow(query, clusterId).Scan(
 		&ci.ID,
 		&ci.ClusterID,

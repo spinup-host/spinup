@@ -5,12 +5,8 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	"log"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/spinup-host/spinup/internal/dockerservice"
@@ -63,33 +59,5 @@ func (td testDocker) cleanup() error {
 }
 
 func TestCreateService(t *testing.T) {
-	t.Parallel()
-	testID := uuid.New().String()
-	dc, err := newTestDocker(testID)
-	require.NoError(t, err)
 
-	tmpDir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-
-	path := filepath.Join(tmpDir, testID+".db")
-	defer func(name string) {
-		_ = os.Remove(name)
-	}(path)
-
-	require.NoError(t, err)
-
-
-	t.Run("without monitoring", func(t *testing.T) {
-		info := ServiceInfo{
-			Architecture: "amd64",
-			Db: DbCluster{
-				Name: "test-svc",
-				Type: "postgres",
-				Port: 15555,
-				Username: "test",
-				Password: "test",
-			},
-			DockerNetwork: "test-network",
-		}
-	})
 }

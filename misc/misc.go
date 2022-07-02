@@ -2,15 +2,8 @@ package misc
 
 import (
 	"bytes"
-	"fmt"
-	"log"
-	"net"
 	"net/http"
 	"os/exec"
-	"strings"
-	"time"
-
-	"github.com/spinup-host/spinup/config"
 )
 
 func minMax(array []int) (int, int) {
@@ -25,31 +18,6 @@ func minMax(array []int) (int, int) {
 		}
 	}
 	return min, max
-}
-
-func Portcheck() (int, error) {
-	min, endingPort := minMax(config.Cfg.Common.Ports)
-	for port := min; port <= endingPort; port++ {
-		target := fmt.Sprintf("%s:%d", "localhost", port)
-		conn, err := net.DialTimeout("tcp", target, 3*time.Second)
-		if err == nil {
-			// we were able to connect, post is already used
-			log.Printf("INFO: port %d in use", port)
-			continue
-		} else {
-			if strings.Contains(err.Error(), "connect: connection refused") {
-				// could not reach port (probably because port is not in use)
-				log.Printf("INFO: port %d is unused", port)
-				return port, nil
-			} else {
-				// could not reach port because of some other error
-				log.Printf("INFO: failed to reach port %d and checking next port: %d", port, port+1)
-			}
-			defer conn.Close()
-		}
-	}
-	log.Printf("WARN: all allocated ports are occupied")
-	return 0, fmt.Errorf("error all allocated ports are occupied")
 }
 
 func GetContainerIdByName(name string) (string, error) {

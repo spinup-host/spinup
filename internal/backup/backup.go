@@ -24,7 +24,6 @@ import (
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/postgres"
-	"github.com/spinup-host/spinup/internal/service"
 	"github.com/spinup-host/spinup/misc"
 	"github.com/spinup-host/spinup/utils"
 
@@ -54,7 +53,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
-	var s service.ServiceInfo
+	var s metastore.ClusterInfo
 	byteArray, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		utils.Logger.Error("Error Occured", zap.Error(err))
@@ -102,7 +101,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	if err := metastore.InsertBackup(
 		db,
 		insertSql,
-		s.Db.ID,
+		s.ClusterID,
 		s.Backup.Dest.Name,
 		s.Backup.Dest.BucketName,
 		0,
@@ -116,8 +115,8 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
-	pgHost := postgres.PREFIXPGCONTAINER + s.Db.Name
-	dockerClient, err := dockerservice.NewDocker()
+	pgHost := postgres.PREFIXPGCONTAINER + s.Name
+	dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
 	if err != nil {
 		utils.Logger.Error("Error creating client", zap.Error(err))
 
@@ -143,7 +142,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
-	ci, err := cis.FilterByName(s.Db.Name)
+	ci, err := cis.FilterByName(s.Name)
 	if err != nil {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
@@ -182,17 +181,16 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.Logger.Info("Scheduling backup at ", zap.String("spec", spec))
 
-	networkName := s.Db.Name + "_default"
 	backupData := BackupData{
 		AwsAccessKeySecret: s.Backup.Dest.ApiKeySecret,
 		AwsAccessKeyId:     s.Backup.Dest.ApiKeyID,
 		WalgS3Prefix:       s.Backup.Dest.BucketName,
 		PgHost:             pgHost,
 		PgDatabase:         "postgres",
-		PgUsername:         s.Db.Username,
-		PgPassword:         s.Db.Password,
+		PgUsername:         s.Username,
+		PgPassword:         s.Password,
 	}
-	_, err = c.AddFunc(spec, TriggerBackup(networkName, backupData))
+	_, err = c.AddFunc(spec, TriggerBackup(config.DefaultNetworkName, backupData))
 	if err != nil {
 		utils.Logger.Error("scheduling database backup", zap.Error(err))
 		misc.ErrorResponse(w, "internal server error", 500)
@@ -210,7 +208,7 @@ func (l logicError) Error() string {
 	return fmt.Sprintf("logic error %v", l.err)
 }
 
-func backupDataValidation(s *service.ServiceInfo) error {
+func backupDataValidation(s *metastore.ClusterInfo) error {
 	if !s.BackupEnabled {
 		return logicError{err: errors.New("backup is not enabled")}
 	}
@@ -229,7 +227,7 @@ func backupDataValidation(s *service.ServiceInfo) error {
 // TriggerBackup returns a closure which is being invoked by the cron
 func TriggerBackup(networkName string, backupData BackupData) func() {
 	var err error
-	dockerClient, err := dockerservice.NewDocker()
+	dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
 	if err != nil {
 		utils.Logger.Error("Error creating client", zap.Error(err))
 	}
