@@ -5,7 +5,6 @@ import (
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/misc"
-	"github.com/spinup-host/spinup/utils"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"log"
@@ -61,19 +60,19 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 
 	byteArray, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		utils.Logger.Error("error reading request body", zap.Error(err))
+		c.logger.Error("error reading request body", zap.Error(err))
 		http.Error(w,"error reading request body", http.StatusInternalServerError)
 		return
 	}
 	err = json.Unmarshal(byteArray, &s)
 	if err != nil {
-		utils.Logger.Error("parsing request", zap.Error(err))
+		c.logger.Error("parsing request", zap.Error(err))
 		http.Error(w,"error reading request body", http.StatusBadRequest)
 		return
 	}
 
 	if s.Db.Type != "postgres" {
-		utils.Logger.Error("unsupported database type")
+		c.logger.Error("unsupported database type")
 		http.Error(w, "provided database type is not supported", http.StatusBadRequest)
 		return
 	}
@@ -99,7 +98,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	}
 
 	if err := c.svc.CreateService(req.Context(), &cluster); err != nil {
-		utils.Logger.Error("failed to add create service", zap.Error(err))
+		c.logger.Error("failed to add create service", zap.Error(err))
 	}
 
 	jsonBody, err := json.Marshal(cluster)

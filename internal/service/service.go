@@ -9,7 +9,6 @@ import (
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
 	"github.com/spinup-host/spinup/internal/postgres"
-	"github.com/spinup-host/spinup/utils"
 	"go.uber.org/zap"
 )
 
@@ -82,7 +81,7 @@ func (svc Service) CreateService(ctx context.Context, info *metastore.ClusterInf
 		return errors.Wrap(err, "starting postgres container")
 	}
 	if len(body.Warnings) != 0 {
-		utils.Logger.Warn("container may be unhealthy", zap.Strings("warnings", body.Warnings))
+		svc.logger.Warn("container may be unhealthy", zap.Strings("warnings", body.Warnings))
 	}
 	info.ClusterID = body.ID
 
@@ -108,7 +107,7 @@ func (svc Service) CreateService(ctx context.Context, info *metastore.ClusterInf
 			// we use a background context since this is a goroutine and the orignal request
 			// might have been terminated.
 			if err := svc.addMonitorTarget(context.Background(), target); err != nil {
-				utils.Logger.Error("could not monitor target", zap.Error(err))
+				svc.logger.Error("could not monitor target", zap.Error(err))
 			}
 			return
 		}(target)

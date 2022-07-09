@@ -4,38 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/spinup-host/spinup/internal/dockerservice"
-	"go.uber.org/zap"
 	"io/fs"
 	"log"
 	"net/http"
-	"path/filepath"
 
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
-	"github.com/spinup-host/spinup/internal/monitor"
-	"github.com/spinup-host/spinup/internal/service"
-
 	_ "modernc.org/sqlite"
 )
-
-type ClusterHandler struct {
-	db      metastore.Db
-	svc service.Service
-	logger *zap.Logger
-}
-
-func NewClusterHandler(client dockerservice.Docker, monitor *monitor.Runtime, logger *zap.Logger, cfg config.Configuration) (ClusterHandler, error) {
-	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
-	db, err := metastore.NewDb(path)
-	if err != nil {
-		return ClusterHandler{}, err
-	}
-	return ClusterHandler{
-		db:      db,
-		svc: service.NewService(client, db, monitor, logger, cfg),
-	}, nil
-}
 
 func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 	log.Println("listcluster")
