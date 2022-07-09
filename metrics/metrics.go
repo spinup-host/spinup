@@ -37,7 +37,7 @@ func (m *MetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	apiKeyHeader := r.Header.Get("x-api-key")
 	var err error
-	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
+	_, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
 		log.Printf(err.Error())
 		http.Error(w, "error validating user", http.StatusUnauthorized)

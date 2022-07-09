@@ -52,7 +52,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 
 	_, err := config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		log.Printf(err.Error())
+		c.logger.Error(err.Error())
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
@@ -78,7 +78,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	}
 	s.Db.Port, err = misc.Portcheck()
 	if err != nil {
-		log.Printf("ERROR: port issue for %s %v", s.UserID, err)
+		c.logger.Error("port issue", zap.Error(err))
 		http.Error(w, "port issue", 500)
 		return
 	}

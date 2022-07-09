@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
-	"log"
 	"net/http"
 
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
+	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
 )
 
 func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
-	log.Println("listcluster")
 	if (*req).Method != "GET" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
@@ -22,21 +21,21 @@ func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 	authHeader := req.Header.Get("Authorization")
 	apiKeyHeader := req.Header.Get("x-api-key")
 	var err error
-	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
+	_, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		log.Println("ERROR: validating user: ", err)
+		c.logger.Error("validating user", zap.Error(err))
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
 	clustersInfo, err := metastore.AllClusters(c.db)
 	if err != nil {
-		log.Println("ERROR: reading from clusterInfo table: ", err)
+		c.logger.Error("reading from clusterInfo table: ", zap.Error(err))
 		http.Error(w, "reading from clusterInfo", http.StatusUnauthorized)
 		return
 	}
 	clusterByte, err := json.Marshal(clustersInfo)
 	if err != nil {
-		log.Printf("ERROR: marshalling clusterInfos %v", err)
+		c.logger.Error("parsing cluster info", zap.Error(err))
 		http.Error(w, "Internal server error ", 500)
 		return
 	}
@@ -54,9 +53,9 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	apiKeyHeader := r.Header.Get("x-api-key")
 	var err error
-	config.Cfg.UserID, err = config.ValidateUser(authHeader, apiKeyHeader)
+	_, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
-		log.Printf(err.Error())
+		c.logger.Error("validating user", zap.Error(err))
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
 			"message": "could not validate user",
 		})
@@ -73,7 +72,7 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 
 	ci, err := metastore.GetClusterByID(c.db, clusterId)
 	if errors.Is(err, fs.ErrNotExist) {
-		log.Println(err)
+		c.logger.Error("no database file", zap.Error(err))
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
 			"message": "sqlite database was not found",
 		})
@@ -85,7 +84,7 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	} else if err != nil {
-		log.Println(err)
+		c.logger.Error("getting cluster info")
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
 			"message": "could not get cluster details",
 		})
