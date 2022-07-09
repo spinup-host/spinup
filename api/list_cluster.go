@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/spinup-host/spinup/internal/dockerservice"
+	"go.uber.org/zap"
 	"io/fs"
 	"log"
 	"net/http"
@@ -20,11 +21,11 @@ import (
 
 type ClusterHandler struct {
 	db      metastore.Db
-	monitor *monitor.Runtime
 	svc service.Service
+	logger *zap.Logger
 }
 
-func NewClusterHandler(client dockerservice.Docker, monitor *monitor.Runtime) (ClusterHandler, error) {
+func NewClusterHandler(client dockerservice.Docker, monitor *monitor.Runtime, logger *zap.Logger, cfg config.Configuration) (ClusterHandler, error) {
 	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
@@ -32,8 +33,7 @@ func NewClusterHandler(client dockerservice.Docker, monitor *monitor.Runtime) (C
 	}
 	return ClusterHandler{
 		db:      db,
-		monitor: monitor,
-		svc: service.NewService(client, db, monitor),
+		svc: service.NewService(client, db, monitor, logger, cfg),
 	}, nil
 }
 

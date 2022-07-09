@@ -8,6 +8,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/golang-jwt/jwt v3.2.1+incompatible
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
@@ -17,9 +18,9 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.8.0
 	github.com/spf13/cobra v1.2.1
-	github.com/stretchr/testify v1.7.3 // indirect
+	github.com/stretchr/testify v1.7.3
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.8.0 // indirect
+	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.14.7

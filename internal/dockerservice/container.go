@@ -17,17 +17,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	PgExporterPrefix = "spinup-postgres-exporter"
+	PrometheusPrefix = "spinup-prometheus"
+)
+
 var ErrNoMatchingEnv = fmt.Errorf("no matching environment variable")
 
 // Container represents a docker container
 type Container struct {
-	ID      string
-	Name    string
-	Options types.ContainerStartOptions
-	// portable docker config
-	Config container.Config
-	// non-portable docker config
-	HostConfig    container.HostConfig
+	ID            string
+	Name          string
+	Options       types.ContainerStartOptions
+	State         string               // current state of the docker container. Could be exited | running
+	Config        container.Config     // portable docker config
+	HostConfig    container.HostConfig // non-portable docker config
 	NetworkConfig network.NetworkingConfig
 	Warning       []string
 }
@@ -182,7 +186,7 @@ func (c *Container) Remove(ctx context.Context, d Docker) error {
 }
 
 // GetEnv returns the value of an environment value in the container or an error if no match is found.
-func(c *Container) GetEnv(ctx context.Context, d Docker, key string) (string, error) {
+func (c *Container) GetEnv(ctx context.Context, d Docker, key string) (string, error) {
 	var value string
 	var found bool
 	for _, e := range c.Config.Env {

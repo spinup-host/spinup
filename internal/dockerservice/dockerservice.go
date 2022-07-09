@@ -17,7 +17,7 @@ import (
 )
 
 type Docker struct {
-	Cli *client.Client
+	Cli         *client.Client
 	NetworkName string
 }
 
@@ -55,6 +55,7 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 			c := &Container{
 				ID:     match.ID,
 				Name:   name,
+				State:  match.State,
 				Config: *data.Config,
 				NetworkConfig: network.NetworkingConfig{
 					EndpointsConfig: data.NetworkSettings.Networks,

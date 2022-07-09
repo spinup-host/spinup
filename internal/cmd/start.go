@@ -52,7 +52,7 @@ func apiHandler() http.Handler {
 		utils.Logger.Error("could not create docker client", zap.Error(err))
 	}
 
-	ch, err := api.NewClusterHandler(dockerClient, monitorRuntime)
+	ch, err := api.NewClusterHandler(dockerClient, monitorRuntime, utils.Logger, config.Cfg)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
@@ -113,7 +113,7 @@ func startCmd() *cobra.Command {
 			}
 
 			if config.Cfg.Common.Monitoring {
-				monitorRuntime = monitor.NewRuntime(dockerClient, utils.Logger)
+				monitorRuntime = monitor.NewRuntime(dockerClient, monitor.WithLogger(utils.Logger), monitor.WithAppConfig(config.Cfg))
 				if err := monitorRuntime.BootstrapServices(ctx); err != nil {
 					utils.Logger.Error("could not start monitoring services", zap.Error(err))
 				} else {

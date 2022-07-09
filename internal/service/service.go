@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
@@ -16,13 +17,19 @@ type Service struct {
 	store          metastore.Db
 	dockerClient   dockerservice.Docker
 	monitorRuntime *monitor.Runtime
+
+	logger *zap.Logger
+	svcConfig config.Configuration
 }
 
-func NewService(client dockerservice.Docker, store metastore.Db, mr *monitor.Runtime) Service {
+func NewService(client dockerservice.Docker, store metastore.Db, mr *monitor.Runtime, logger *zap.Logger, cfg config.Configuration) Service {
 	return Service{
 		store:          store,
 		dockerClient:   client,
 		monitorRuntime: mr,
+
+		logger: logger,
+		svcConfig: cfg,
 	}
 }
 
@@ -84,6 +91,13 @@ func (svc Service) CreateService(ctx context.Context, info *metastore.ClusterInf
 	}
 
 	if info.Monitoring == "enable" {
+		if svc.monitorRuntime == nil {
+			svc.monitorRuntime = monitor.NewRuntime(svc.dockerClient, monitor.WithLogger(svc.logger), monitor.WithAppConfig(svc.svcConfig))
+			if err := svc.monitorRuntime.BootstrapServices(ctx); err != nil {
+				return errors.Wrap(err, "failed to start monitoring services")
+			}
+		}
+
 		target := &monitor.Target{
 			ContainerName: pgContainer.Name,
 			UserName:      info.Username,
@@ -105,12 +119,6 @@ func (svc Service) CreateService(ctx context.Context, info *metastore.ClusterInf
 
 func (svc *Service) addMonitorTarget(ctx context.Context, target *monitor.Target) error {
 	var err error
-	if svc.monitorRuntime == nil {
-		svc.monitorRuntime = monitor.NewRuntime(svc.dockerClient, utils.Logger)
-		if err := svc.monitorRuntime.BootstrapServices(ctx); err != nil {
-			return errors.Wrap(err, "failed to start monitoring services")
-		}
-	}
 	if err = svc.monitorRuntime.AddTarget(ctx, target); err != nil {
 		return errors.Wrap(err, "failed to add target")
 	}

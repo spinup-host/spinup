@@ -15,14 +15,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/misc"
-)
-
-const (
-	PrometheusContainerName = "spinup-prometheus"
-	PgExporterContainerName = "spinup-postgres-exporter"
 )
 
 // Target represents a postgres service for monitoring.
@@ -55,7 +49,7 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 		}
 	}()
 
-	promContainer, err = r.dockerClient.GetContainer(ctx, PrometheusContainerName)
+	promContainer, err = r.dockerClient.GetContainer(ctx, r.prometheusName)
 	if err != nil {
 		return err
 	}
@@ -90,7 +84,7 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 		}
 	}
 
-	pgExporterContainer, err = r.dockerClient.GetContainer(ctx, PgExporterContainerName)
+	pgExporterContainer, err = r.dockerClient.GetContainer(ctx, r.pgExporterName)
 	if err != nil {
 		return err
 	}
@@ -128,7 +122,7 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 
 	metricsPort := nat.Port("9187/tcp")
 	postgresExporterContainer := dockerservice.NewContainer(
-		PgExporterContainerName,
+		r.pgExporterName,
 		container.Config{
 			Image: image,
 			Env:   env,
@@ -152,7 +146,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	image := "bitnami/prometheus"
 
-	promDataDir := filepath.Join(config.Cfg.Common.ProjectDir, "prom_data")
+	promDataDir := filepath.Join(r.appConfig.Common.ProjectDir, "prom_data")
 	err := os.Mkdir(promDataDir, 0644)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return &dockerservice.Container{}, errors.Wrap(err, "could not create prometheus data dir")
@@ -174,7 +168,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 
 	metricsPort := nat.Port("9090/tcp")
 	promContainer := dockerservice.NewContainer(
-		PrometheusContainerName,
+		r.prometheusName,
 		container.Config{
 			Image: image,
 			User:  "root",
@@ -194,7 +188,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 }
 
 func (r *Runtime) getPromConfigPath() (string, error) {
-	cfgPath := filepath.Join(config.Cfg.Common.ProjectDir, "prometheus.yml")
+	cfgPath := filepath.Join(r.appConfig.Common.ProjectDir, "prometheus.yml")
 	_, err := os.Open(cfgPath)
 	if errors.Is(err, os.ErrNotExist) {
 		_, err = os.Create(cfgPath)

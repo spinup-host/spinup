@@ -97,6 +97,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		MinVersion: int(s.Version.Min),
 		Monitoring: s.Db.Monitoring,
 	}
+
 	if err := c.svc.CreateService(req.Context(), &cluster); err != nil {
 		utils.Logger.Error("failed to add create service", zap.Error(err))
 	}
