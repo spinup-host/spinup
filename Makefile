@@ -1,10 +1,12 @@
 GOBIN ?= $(shell go env GOPATH)/bin
 BINARY_NAME ?= spinup
 VERSION ?= dev-unknown
-SERVICE_PORT ?= 4434
 
-DOCKER_REGISTRY?= #if set it should finished by /
-EXPORT_RESULT?=false # for CI please set EXPORT_RESULT to true
+SPINUP_BUILD_TAGS = -ldflags " \
+			-X 'github.com/spinup-host/spinup/build.Version=$(VERSION)' \
+			-X 'github.com/spinup-host/spinup/build.FullCommit=$(shell git rev-parse HEAD)' \
+			-X 'github.com/spinup-host/spinup/build.Branch=$(shell git symbolic-ref --short HEAD)' \
+			"
 
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
@@ -17,7 +19,7 @@ RESET  := $(shell tput -Txterm sgr0)
 all: help
 
 build: ## Build your project and put the output binary in out/bin/
-	go build -o bin/$(BINARY_NAME) .
+	go build $(SPINUP_BUILD_TAGS) -o bin/$(BINARY_NAME) .
 
 clean: ## Remove build related file 
 	rm -fr ./bin
