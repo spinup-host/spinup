@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/spinup-host/spinup/config"
-	"github.com/spinup-host/spinup/internal/metastore"
 	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
 )
@@ -27,7 +26,7 @@ func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
-	clustersInfo, err := metastore.AllClusters(c.db)
+	clustersInfo, err := c.svc.ListClusters(req.Context())
 	if err != nil {
 		c.logger.Error("reading from clusterInfo table: ", zap.Error(err))
 		http.Error(w, "reading from clusterInfo", http.StatusUnauthorized)
@@ -70,7 +69,7 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ci, err := metastore.GetClusterByID(c.db, clusterId)
+	ci, err := c.svc.GetClusterByID(r.Context(), clusterId)
 	if errors.Is(err, fs.ErrNotExist) {
 		c.logger.Error("no database file", zap.Error(err))
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
@@ -95,4 +94,3 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 		"data": ci,
 	})
 }
-

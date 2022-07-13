@@ -2,34 +2,20 @@ package api
 
 import (
 	"encoding/json"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
-	"path/filepath"
-
-	"github.com/spinup-host/spinup/config"
-	"github.com/spinup-host/spinup/internal/dockerservice"
-	"github.com/spinup-host/spinup/internal/metastore"
-	"github.com/spinup-host/spinup/internal/monitor"
-	"github.com/spinup-host/spinup/internal/service"
-	"go.uber.org/zap"
 )
 
-
 type ClusterHandler struct {
-	db      metastore.Db
-	svc service.Service
+	svc    clusterService
 	logger *zap.Logger
 }
 
-func NewClusterHandler(client dockerservice.Docker, monitor *monitor.Runtime, logger *zap.Logger, cfg config.Configuration) (ClusterHandler, error) {
-	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
-	db, err := metastore.NewDb(path)
-	if err != nil {
-		return ClusterHandler{}, err
-	}
+func NewClusterHandler(clusterService clusterService, logger *zap.Logger) (ClusterHandler, error) {
 	return ClusterHandler{
-		db:      db,
-		svc: service.NewService(client, db, monitor, logger, cfg),
+		svc:    clusterService,
+		logger: logger,
 	}, nil
 }
 
