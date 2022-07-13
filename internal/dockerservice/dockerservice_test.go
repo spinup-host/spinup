@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("couldn't create a new docker instance")
 	}
-	// TODO: (viggy) we should create some customer spinup images for testing purpose instead of using docker registry postgres images
+	//TODO: (viggy) we should create some customer spinup images for testing purpose instead of using docker registry postgres images
 	imagesToRemove := []string{"postgres:14-alpine", "postgres:13-alpine"}
 	removeImageHelper(imagesToRemove)
 	exitVal := m.Run()
@@ -68,6 +68,7 @@ func Test_imageExistsLocally(t *testing.T) {
 			actual, err := imageExistsLocally(context.Background(), docker, d.image)
 			if err != nil {
 				t.Errorf("error testing imageExistsLocally() for test data %+v", d)
+
 			}
 			if actual != d.expected {
 				t.Errorf("incorrect result: actual %t , expected %t", actual, d.expected)

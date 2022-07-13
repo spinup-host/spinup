@@ -19,7 +19,7 @@ type Db struct {
 // clustersInfo type has methods which provide us to filter them by name etc.
 type clustersInfo []config.ClusterInfo
 
-// FilterByName filters cluster by name. Since cluster names are unique as soon as we find a match we return.
+// FilterByName filters cluster by name. Since cluster names are unique as soon as we find a match we return
 func (c clustersInfo) FilterByName(name string) (config.ClusterInfo, error) {
 	for _, clusterInfo := range c {
 		if clusterInfo.Name == name {
@@ -37,11 +37,7 @@ func NewDb(path string) (Db, error) {
 	return Db{Client: db}, nil
 }
 
-func open(path string) (*sql.DB, error) {
-	return sql.Open("sqlite", path)
-}
-
-// migration creates table.
+// migration creates table
 func migration(ctx context.Context, db Db) error {
 	sqlStatements := []string{
 		"create table if not exists clusterInfo (id integer not null primary key autoincrement, clusterId text, name text, username text, password text, port integer, majVersion integer, minVersion integer);",
@@ -50,6 +46,7 @@ func migration(ctx context.Context, db Db) error {
 	tx, err := db.Client.Begin()
 	if err != nil {
 		return fmt.Errorf("couldn't begin a transaction %w", err)
+
 	}
 	for _, sqlStatement := range sqlStatements {
 		_, err = tx.ExecContext(ctx, sqlStatement)

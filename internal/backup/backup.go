@@ -148,7 +148,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	execPath := "/usr/lib/postgresql/" + strconv.Itoa(ci.MajVersion) + "/bin/"
 	if err = postgres.ReloadPostgres(dockerClient, execPath, postgres.PGDATADIR, pgHost); err != nil {
-		misc.ErrorResponse(w, " internal server error", 500)
+		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
 	c := cron.New()
@@ -227,7 +227,7 @@ func backupDataValidation(s *config.Service) error {
 	return nil
 }
 
-// TriggerBackup returns a closure which is being invoked by the cron.
+// TriggerBackup returns a closure which is being invoked by the cron
 func TriggerBackup(networkName string, backupData BackupData) func() {
 	var err error
 	dockerClient, err := dockerservice.NewDocker()
@@ -319,7 +319,7 @@ func contentToTar(content []byte) (io.Writer, func(), error) {
 
 	hdr := &tar.Header{
 		Name: "modify-pghba",
-		Mode: 0o655,
+		Mode: 0655,
 		Size: int64(len(content)),
 	}
 	if err := tw.WriteHeader(hdr); err != nil {

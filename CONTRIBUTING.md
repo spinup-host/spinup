@@ -24,7 +24,7 @@ If you have a specific idea of a fix or update, follow these steps below to subm
 1. Fork the Spinup repo, and then clone it:
 
    ```bash
-   export user={your github. profile name}
+   export user={your github profile name}
    git clone git@github.com:${user}/spinup.git
    ```
 
@@ -60,11 +60,15 @@ If you have a specific idea of a fix or update, follow these steps below to subm
    git checkout -b myfeature
    ```
 
-### Step 2: Start Spinup locally
+### Step 2: Compile and start the Spinup API server locally
+```bash
+make run-api
+```
+NB: Run `make help` on your terminal to see the full list of make commands.
 
-[Local-steup](https://github.com/spinup-host/spinup#how-to-run)
+### Step 3: Hack and make your changes!
 
-### Step 3: Commit and push your changes
+### Step 4: Commit, sync and test your changes
 
 1. Run the following commands to keep your branch in sync:
 
@@ -73,27 +77,12 @@ If you have a specific idea of a fix or update, follow these steps below to subm
    git rebase upstream/master
    ```
 
-2. Commit your changes:
-
+2 Run these commands to validate your changes.
    ```bash
-   git add -A
-   git commit --signoff
+   make test
+   make checks
    ```
 
-3. Push your changes to the remote branch:
+### Making a Pull Request
+Pull request are welcome. For major changes, please open an issue first to discuss what you would like to do.
 
-   ```bash
-   git push -f origin myfeature
-   ```
-
-### Step 4: Create a pull request
-
-1. Visit your fork at GitHub.
-2. Click the Compare & pull request button next to your `myfeature` branch.
-3. Edit the description of the pull request to match your changes.
-
-### Step 5: Get a code review
-
-Once your pull request has been opened, it will be assigned to at least two reviewers. The reviewers will do a thorough code review of correctness, bugs, opportunities for improvement, documentation and comments, and style.
-
-Commit changes made in response to review comments to the same branch on your fork.
