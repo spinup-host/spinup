@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"log"
 	"os"
 	"strings"
@@ -14,12 +15,11 @@ import (
 var docker Docker
 
 func TestMain(m *testing.M) {
-	fmt.Println("INFO: setting up things for testing dockerservice package")
-	var err error
-	docker, err = NewDocker()
+	cli, err := client.NewClientWithOpts()
 	if err != nil {
-		log.Fatalf("couldn't create a new docker instance")
+		fmt.Printf("error creating client %v", err)
 	}
+	docker = Docker{Cli: cli}
 	//TODO: (viggy) we should create some customer spinup images for testing purpose instead of using docker registry postgres images
 	imagesToRemove := []string{"postgres:14-alpine", "postgres:13-alpine"}
 	removeImageHelper(imagesToRemove)
@@ -51,7 +51,7 @@ func Test_imageExistsLocally(t *testing.T) {
 		pullImageFromDockerRegistry bool
 		expected                    bool
 	}{
-		{"image exist", "postgres:14-alpine", true, true},
+		{"image exist", "alpine", true, true},
 		{"image doesnot exist", "imageDoesnotExist:notag", false, false},
 	}
 	for _, d := range data {

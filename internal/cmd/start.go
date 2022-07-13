@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spinup-host/spinup/internal/metastore"
+	"github.com/spinup-host/spinup/internal/service"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -51,8 +53,15 @@ func apiHandler() http.Handler {
 	if err != nil {
 		utils.Logger.Error("could not create docker client", zap.Error(err))
 	}
+	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
+	db, err := metastore.NewDb(path)
+	if err != nil {
+		utils.Logger.Fatal("unable to setup sqlite database", zap.Error(err))
+	}
 
-	ch, err := api.NewClusterHandler(dockerClient, monitorRuntime, utils.Logger, config.Cfg)
+	clusterService := service.NewService(dockerClient, db, monitorRuntime, utils.Logger, config.Cfg)
+
+	ch, err := api.NewClusterHandler(clusterService, utils.Logger)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}

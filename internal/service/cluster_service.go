@@ -21,6 +21,14 @@ type Service struct {
 	svcConfig config.Configuration
 }
 
+type ErrNoMatch struct {
+	id string
+}
+
+func (e ErrNoMatch) Error() string {
+	return fmt.Sprintf("no resource found with ID: '%s'", e.id)
+}
+
 func NewService(client dockerservice.Docker, store metastore.Db, mr *monitor.Runtime, logger *zap.Logger, cfg config.Configuration) Service {
 	return Service{
 		store:          store,
@@ -58,6 +66,7 @@ type Destination struct {
 	ApiKeySecret string
 }
 
+// CreateService creates a new database service alongside the needed containers.
 func (svc Service) CreateService(ctx context.Context, info *metastore.ClusterInfo) error {
 	image := fmt.Sprintf("%s/%s:%d.%d", "amd64", "postgres", info.MajVersion, info.MinVersion)
 
@@ -122,4 +131,24 @@ func (svc *Service) addMonitorTarget(ctx context.Context, target *monitor.Target
 		return errors.Wrap(err, "failed to add target")
 	}
 	return nil
+}
+
+// ListClusters list all clusters currently available
+func (svc Service) ListClusters(ctx context.Context) ([]metastore.ClusterInfo, error) {
+	return metastore.AllClusters(svc.store)
+}
+
+// GetClusterByID returns the specific cluster with the given ID, returns ErrNoMatch if no cluster was found.
+func (svc Service) GetClusterByID(ctx context.Context, clusterID string) (metastore.ClusterInfo, error) {
+	ci, err := metastore.GetClusterByID(svc.store, clusterID)
+	if err != nil {
+		return ci, err
+	}
+	if ci.ClusterID == "" && ci.Name == "" {
+		return ci, ErrNoMatch {
+			id: clusterID,
+		}
+	}
+
+	return ci, nil
 }
