@@ -6,4 +6,6 @@ spinup-host
 config.yaml
 testuser
 bin
-tmp
+prom_data
+metastore.db
+prometheus.yml

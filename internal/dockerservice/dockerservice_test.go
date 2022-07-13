@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"log"
 	"os"
 	"strings"
@@ -34,6 +35,13 @@ func removeImageHelper(imagesToRemove []string) {
 			log.Printf("INFO: error removing docker image %s %v \n", imageToRemove, err)
 		}
 	}
+}
+
+func removeDockerImage(d Docker, image string) error {
+	_, err := d.Cli.ImageRemove(context.Background(), image, types.ImageRemoveOptions{
+		Force: true,
+	})
+	return err
 }
 
 func Test_imageExistsLocally(t *testing.T) {

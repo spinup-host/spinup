@@ -11,15 +11,10 @@ We are currently using Github Authentication. We should be able to support other
 
 Currently we only support Postgres dbms, but we should be able to support other open source databases like [MySQL](https://www.mysql.com/), [MariaDB](https://mariadb.org/) etc.
 
-![architecture](architecture.jpeg)
+![architecture](architecture.png)
 ## Installation
 ### Linux
 To get started with Spinup on Linux:
-- Create a GitHub project. Next, export the project's client ID and Secret as environment variables
-```bash
-export CLIENT_ID=<GITHUB_CLIENT_ID>
-export CLIENT_SECRET=<GITHUB_CLIENT_SECRET>
-```
 - Run the installation script using the command below:
 ```bash
 bash < <(curl -s https://raw.githubusercontent.com/spinup-host/spinup/main/scripts/install-spinup.sh)
@@ -28,6 +23,16 @@ bash < <(curl -s https://raw.githubusercontent.com/spinup-host/spinup/main/scrip
 - Start the Spinup servers (both API and frontend) by running:
 ```bash
 spinup start
+```
+- (Optional) If you want to use Github Authentication, create a project in [github](https://github.com). Next, export the project's client ID and Secret as environment variables
+```bash
+export CLIENT_ID=<GITHUB_CLIENT_ID>
+export CLIENT_SECRET=<GITHUB_CLIENT_SECRET>
+```
+
+- (Optional) You can change the API_KEY value using enviornment variable. Default value is `spinup`
+```bash
+export SPINUP_API_KEY=<YOUR_API_KEY>
 ```
 
 ### Others

@@ -20,13 +20,13 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/robfig/cron/v3"
-	"go.uber.org/zap"
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/postgres"
 	"github.com/spinup-host/spinup/misc"
 	"github.com/spinup-host/spinup/utils"
+	"go.uber.org/zap"
 )
 
 const PREFIXBACKUPCONTAINER = "spinup-postgres-backup-"
@@ -97,7 +97,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	dowInt, _ := strconv.Atoi(dow)
 
 	insertSql := "insert into backup(clusterId, destination, bucket, second, minute, hour, dom, month, dow) values(?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	if err := metastore.InsertBackupIntoMeta(
+	if err := metastore.InsertBackup(
 		db,
 		insertSql,
 		s.Db.ID,
@@ -118,7 +118,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	dockerClient, err := dockerservice.NewDocker()
 	if err != nil {
 		utils.Logger.Error("Error creating client", zap.Error(err))
-		
+
 	}
 	pgContainer, err := dockerClient.GetContainer(context.Background(), pgHost)
 	if err != nil {
@@ -136,7 +136,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
 	}
-	cis, err := metastore.ClustersInfo(db)
+	cis, err := metastore.AllClusters(db)
 	if err != nil {
 		misc.ErrorResponse(w, "internal server error", 500)
 		return
@@ -266,7 +266,7 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 	return func() {
 		// TODO: explicilty ignoring the output of Start. Since i don't know how to use
 		utils.Logger.Info("starting backup")
-		op, err = backupContainer.Start(dockerClient)
+		op, err = backupContainer.Start(context.Background(), dockerClient)
 		if err != nil {
 			utils.Logger.Error("starting backup container", zap.Error(err))
 		}
@@ -277,7 +277,7 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 
 const tarPath = "modify-pghba.tar"
 
-func updatePghba(c dockerservice.Container, d dockerservice.Docker, content []byte) error {
+func updatePghba(c *dockerservice.Container, d dockerservice.Docker, content []byte) error {
 	_, cleanup, err := contentToTar(content)
 	if err != nil {
 		return fmt.Errorf("error converting content to tar file %w", err)

@@ -57,7 +57,7 @@ func recordMetrics(db metastore.Db, errCh chan error) {
 	go func() {
 		for {
 			time.Sleep(2 * time.Second)
-			clusterInfos, err := metastore.ClustersInfo(db)
+			clusterInfos, err := metastore.AllClusters(db)
 			if err != nil {
 				errCh <- fmt.Errorf("couldn't read cluster info %w", err)
 				close(errCh)

@@ -11,6 +11,10 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+const (
+	DefaultNetworkName = "spinup_services"
+)
+
 type Configuration struct {
 	Common struct {
 		Architecture string `yaml:"architecture"`
@@ -20,7 +24,8 @@ type Configuration struct {
 		ClientSecret string `yaml:"client_secret"`
 		ApiKey       string `yaml:"api_key"`
 		LogDir       string `yaml:"log_dir"`
-		LogFile       string `yaml:"log_file"`
+		LogFile      string `yaml:"log_file"`
+		Monitoring   bool   `yaml:"monitoring"`
 	} `yaml:"common"`
 	VerifyKey *rsa.PublicKey
 	SignKey   *rsa.PrivateKey
@@ -71,18 +76,15 @@ type Destination struct {
 	ApiKeyID     string
 	ApiKeySecret string
 }
-type serviceResponse struct {
-	HostName    string
-	Port        int
-	ContainerID string
-}
 
 type ClusterInfo struct {
-	ID         int    `json:"id"`
+	Host       string `json:"host"`
+	ID         int    `json:"id,omitempty"`
 	ClusterID  string `json:"cluster_id"`
 	Name       string `json:"name"`
 	Port       int    `json:"port"`
 	Username   string `json:"username"`
+	Password   string `json:"password"`
 	MajVersion int    `json:"majversion"`
 	MinVersion int    `json:"minversion"`
 }
@@ -151,8 +153,8 @@ func JWTToString(tokenString string) (string, error) {
 	return claims.Text, nil
 }
 
-// Create a struct that will be encoded to a JWT.
-// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time.
+// Claims is a struct that will be encoded to a JWT.
+// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
 type Claims struct {
 	Text string `json:"text"`
 	jwt.StandardClaims
