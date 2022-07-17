@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+
 	"github.com/spinup-host/spinup/config"
 )
 

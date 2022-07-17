@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spinup-host/spinup/build"
 
 	"github.com/spf13/cobra"
+
+	"github.com/spinup-host/spinup/build"
 )
 
 func versionCmd(bi build.Info) *cobra.Command {

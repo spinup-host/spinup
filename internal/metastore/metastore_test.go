@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/spinup-host/spinup/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +25,7 @@ func TestServices(t *testing.T) {
 	db, err := NewDb(path)
 	require.NoError(t, err)
 
-	clusters := []config.ClusterInfo{
+	clusters := []ClusterInfo{
 		{
 			Host: "localhost",
 			Name: "db1",

@@ -6,36 +6,32 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
 )
 
-// NewDocker returns a Docker struct
-func NewDocker(opts ...client.Opt) (Docker, error) {
-	cli, err := client.NewClientWithOpts(opts...)
-	if err != nil {
-		fmt.Printf("error creating client %v", err)
-	}
-	//TODO: Check. Does this initialize and assign
-	return Docker{Cli: cli}, nil
-}
+const (
+	PgExporterPrefix = "spinup-postgres-exporter"
+	PrometheusPrefix = "spinup-prometheus"
+)
+
+var ErrNoMatchingEnv = fmt.Errorf("no matching environment variable")
 
 // Container represents a docker container
 type Container struct {
-	ID      string
-	Name    string
-	Options types.ContainerStartOptions
-	// portable docker config
-	Config container.Config
-	// non-portable docker config
-	HostConfig    container.HostConfig
+	ID            string
+	Name          string
+	Options       types.ContainerStartOptions
+	State         string               // current state of the docker container. Could be exited | running
+	Config        container.Config     // portable docker config
+	HostConfig    container.HostConfig // non-portable docker config
 	NetworkConfig network.NetworkingConfig
 	Warning       []string
 }
@@ -189,3 +185,18 @@ func (c *Container) Remove(ctx context.Context, d Docker) error {
 	return d.Cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
 }
 
+// GetEnv returns the value of an environment value in the container or an error if no match is found.
+func (c *Container) GetEnv(ctx context.Context, d Docker, key string) (string, error) {
+	var value string
+	var found bool
+	for _, e := range c.Config.Env {
+		if strings.Contains(e, key) {
+			_, value, found = strings.Cut(e, "=")
+		}
+	}
+
+	if value == "" && !found {
+		return "", ErrNoMatchingEnv
+	}
+	return value, nil
+}

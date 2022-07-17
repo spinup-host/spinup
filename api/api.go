@@ -4,7 +4,21 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 )
+
+type ClusterHandler struct {
+	svc    clusterService
+	logger *zap.Logger
+}
+
+func NewClusterHandler(clusterService clusterService, logger *zap.Logger) (ClusterHandler, error) {
+	return ClusterHandler{
+		svc:    clusterService,
+		logger: logger,
+	}, nil
+}
 
 // respond converts its data parameter to JSON and send it as an HTTP response.
 func respond(statusCode int, w http.ResponseWriter, data interface{}) {
@@ -28,4 +42,10 @@ func respond(statusCode int, w http.ResponseWriter, data interface{}) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+}
+
+func Hello(w http.ResponseWriter, req *http.Request) {
+	respond(200, w, map[string]string{
+		"message": "Welcome to Spinup!",
+	})
 }

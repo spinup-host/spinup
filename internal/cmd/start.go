@@ -18,7 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt"
@@ -31,7 +30,9 @@ import (
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/backup"
 	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
+	"github.com/spinup-host/spinup/internal/service"
 	"github.com/spinup-host/spinup/metrics"
 	"github.com/spinup-host/spinup/utils"
 )
@@ -48,7 +49,19 @@ var (
 )
 
 func apiHandler() http.Handler {
-	ch, err := api.NewClusterHandler(monitorRuntime)
+	dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
+	if err != nil {
+		utils.Logger.Error("could not create docker client", zap.Error(err))
+	}
+	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
+	db, err := metastore.NewDb(path)
+	if err != nil {
+		utils.Logger.Fatal("unable to setup sqlite database", zap.Error(err))
+	}
+
+	clusterService := service.NewService(dockerClient, db, monitorRuntime, utils.Logger, config.Cfg)
+
+	ch, err := api.NewClusterHandler(clusterService, utils.Logger)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
@@ -94,22 +107,22 @@ func startCmd() *cobra.Command {
 			log.Println("INFO: Initial Validations successful")
 			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
 
-			dockerClient, err := dockerservice.NewDocker()
+			dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
 			if err != nil {
 				utils.Logger.Error("could not create docker client", zap.Error(err))
 			}
 			ctx := context.TODO()
-			_, err = dockerClient.CreateNetwork(ctx, config.DefaultNetworkName, types.NetworkCreate{CheckDuplicate: true})
+			_, err = dockerClient.CreateNetwork(ctx, dockerClient.NetworkName)
 			if err != nil {
 				if errors.Is(err, dockerservice.ErrDuplicateNetwork) {
-					utils.Logger.Fatal(fmt.Sprintf("found multiple docker networks with name: '%s', remove them and restart Spinup.", config.DefaultNetworkName))
+					utils.Logger.Fatal(fmt.Sprintf("found multiple docker networks with name: '%s', remove them and restart Spinup.", dockerClient.NetworkName))
 				} else {
 					utils.Logger.Fatal("unable to create docker network", zap.Error(err))
 				}
 			}
 
 			if config.Cfg.Common.Monitoring {
-				monitorRuntime = monitor.NewRuntime(dockerClient, utils.Logger)
+				monitorRuntime = monitor.NewRuntime(dockerClient, monitor.WithLogger(utils.Logger), monitor.WithAppConfig(config.Cfg))
 				if err := monitorRuntime.BootstrapServices(ctx); err != nil {
 					utils.Logger.Error("could not start monitoring services", zap.Error(err))
 				} else {

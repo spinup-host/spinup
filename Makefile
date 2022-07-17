@@ -31,10 +31,14 @@ test-coverage: ## Run the tests of the project and export the coverage
 	go test -cover -covermode=count -coverprofile=profile.cov ./...
 	go tool cover -func profile.cov
 
+format:
+	gci write --section Standard --section Default --section "Prefix(github.com/spinup-host/spinup)" .
+
 install-deps:
 	go mod download
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
 	go install github.com/vektra/mockery/v2@v2.14.0
+	go install github.com/daixiang0/gci@v0.4.2
 	@echo 'Dev dependencies have been installed. Run "export PATH=$$PATH/$$(go env GOPATH)/bin" to use installed binaries.'
 
 run-api:

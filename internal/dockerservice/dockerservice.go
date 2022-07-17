@@ -17,7 +17,18 @@ import (
 )
 
 type Docker struct {
-	Cli *client.Client
+	Cli         *client.Client
+	NetworkName string
+}
+
+// NewDocker returns a Docker struct
+func NewDocker(networkName string, opts ...client.Opt) (Docker, error) {
+	cli, err := client.NewClientWithOpts(opts...)
+	if err != nil {
+		fmt.Printf("error creating client %v", err)
+	}
+	//TODO: Check. Does this initialize and assign
+	return Docker{NetworkName: networkName, Cli: cli}, nil
 }
 
 var ErrDuplicateNetwork = errors.New("duplicate networks found with given name")
@@ -44,6 +55,7 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 			c := &Container{
 				ID:     match.ID,
 				Name:   name,
+				State:  match.State,
 				Config: *data.Config,
 				NetworkConfig: network.NetworkingConfig{
 					EndpointsConfig: data.NetworkSettings.Networks,
@@ -56,8 +68,8 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 }
 
 // CreateNetwork creates a new Docker network.
-func (d Docker) CreateNetwork(ctx context.Context, name string, opt types.NetworkCreate) (types.NetworkCreateResponse, error) {
-	networkResponse, err := d.Cli.NetworkCreate(ctx, name, opt)
+func (d Docker) CreateNetwork(ctx context.Context, name string) (types.NetworkCreateResponse, error) {
+	networkResponse, err := d.Cli.NetworkCreate(ctx, name, types.NetworkCreate{CheckDuplicate: true})
 	if err == nil {
 		return networkResponse, nil
 	}

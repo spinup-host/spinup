@@ -8,25 +8,58 @@ import (
 	"log"
 
 	_ "modernc.org/sqlite"
-
-	"github.com/spinup-host/spinup/config"
 )
 
 type Db struct {
 	Client *sql.DB
 }
 
+type ClusterInfo struct {
+	// one of arm64v8 or arm32v7 or amd64
+	Architecture string `json:"architecture,omitempty"`
+
+	Type       string `json:"type"` // only "postgres" is supported at the moment
+	Host       string `json:"host"`
+	ID         int    `json:"id,omitempty"`
+	ClusterID  string `json:"cluster_id"`
+	Name       string `json:"name"`
+	Port       int    `json:"port"`
+	Username   string `json:"username"`
+	Password   string `json:"password,omitempty"`
+	MajVersion int    `json:"majversion"`
+	MinVersion int    `json:"minversion"`
+	Monitoring string `json:"monitoring,omitempty"`
+	CPU        int64  `json:"cpu,omitempty"`
+	Memory     int64  `json:"memory,omitempty"`
+
+	BackupEnabled bool         `json:"backup_enabled,omitempty"`
+	Backup        backupConfig `json:"backup,omitempty"`
+}
+
+type backupConfig struct {
+	// https://man7.org/linux/man-pages/man5/crontab.5.html
+	Schedule map[string]interface{}
+	Dest     Destination `json:"Dest"`
+}
+
+type Destination struct {
+	Name         string
+	BucketName   string
+	ApiKeyID     string
+	ApiKeySecret string
+}
+
 // clustersInfo type has methods which provide us to filter them by name etc.
-type clustersInfo []config.ClusterInfo
+type clustersInfo []ClusterInfo
 
 // FilterByName filters cluster by name. Since cluster names are unique as soon as we find a match we return
-func (c clustersInfo) FilterByName(name string) (config.ClusterInfo, error) {
+func (c clustersInfo) FilterByName(name string) (ClusterInfo, error) {
 	for _, clusterInfo := range c {
 		if clusterInfo.Name == name {
 			return clusterInfo, nil
 		}
 	}
-	return config.ClusterInfo{}, errors.New("cluster not found")
+	return ClusterInfo{}, errors.New("cluster not found")
 }
 
 func NewDb(path string) (Db, error) {
@@ -63,7 +96,7 @@ func migration(ctx context.Context, db Db) error {
 
 // InsertService adds a new row containing the cluster/service info to the database.
 // TODO: How to write generic functions with varying fields and types? Maybe generics
-func InsertService(db Db, cluster config.ClusterInfo) error {
+func InsertService(db Db, cluster ClusterInfo) error {
 	query := "insert into clusterInfo(clusterId, name, username, password, port, majVersion, minVersion) values(?, ?, ?, ?, ?, ?, ?)"
 	tx, err := db.Client.Begin()
 	if err != nil {
@@ -119,7 +152,7 @@ func AllClusters(db Db) (clustersInfo, error) {
 	}
 	defer rows.Close()
 	var csi clustersInfo
-	var cluster config.ClusterInfo
+	var cluster ClusterInfo
 	for rows.Next() {
 		err = rows.Scan(&cluster.ID, &cluster.ClusterID, &cluster.Name, &cluster.Username, &cluster.Password, &cluster.Port, &cluster.MajVersion, &cluster.MinVersion)
 		if err != nil {
@@ -131,9 +164,9 @@ func AllClusters(db Db) (clustersInfo, error) {
 	return csi, nil
 }
 
-// GetClusterByID returns info about the service whose cluster ID is provided.
-func GetClusterByID(db Db, clusterId string) (config.ClusterInfo, error) {
-	var ci config.ClusterInfo
+// GetClusterByID returns info about the cluster whose ID is provided.
+func GetClusterByID(db Db, clusterId string) (ClusterInfo, error) {
+	var ci ClusterInfo
 	query := `SELECT id, clusterId, name, username, password, port, majVersion, minVersion FROM clusterInfo WHERE clusterId = ? LIMIT 1`
 	err := db.Client.QueryRow(query, clusterId).Scan(
 		&ci.ID,

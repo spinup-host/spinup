@@ -1,16 +1,15 @@
 package utils
 import (
+	"fmt"
+	"log"
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
-	"log"
-	"fmt"
 )
 var Logger *zap.Logger
-/*
-This is the initializeation function that needs to be invoked
-at the startup of the server. 
-*/
+
+// InitializeLogger sets up a log file to write spinup logs to.
 func InitializeLogger(logDir string, fileName string) {
 	loggingFilePath := ""
 
@@ -27,7 +26,7 @@ func InitializeLogger(logDir string, fileName string) {
 		loggingFilePath += "/" + fileName
 	}
 
-	log.Println(fmt.Sprintf("Spinup Logging file -> %s\n", loggingFilePath))
+	log.Println(fmt.Sprintf("using log file %s\n", loggingFilePath))
     config.EncodeTime = zapcore.ISO8601TimeEncoder
 	fileEncoder := zapcore.NewJSONEncoder(config)
 	consoleEncoder := zapcore.NewConsoleEncoder(config)
