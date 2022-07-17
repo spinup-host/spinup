@@ -7,9 +7,10 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/spinup-host/spinup/config"
 	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
+
+	"github.com/spinup-host/spinup/config"
 )
 
 func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {

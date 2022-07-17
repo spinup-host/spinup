@@ -4,9 +4,10 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt"
 	"log"
 	"strings"
+
+	"github.com/golang-jwt/jwt"
 )
 
 const (

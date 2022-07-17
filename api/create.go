@@ -2,14 +2,16 @@ package api
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"log"
+	"net/http"
+
+	"go.uber.org/zap"
+	_ "modernc.org/sqlite"
+
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/misc"
-	"go.uber.org/zap"
-	"io/ioutil"
-	"log"
-	_ "modernc.org/sqlite"
-	"net/http"
 )
 
 // Service is used to parse request from JSON payload

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+
 	"github.com/spinup-host/spinup/build"
 )
 

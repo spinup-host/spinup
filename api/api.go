@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 type ClusterHandler struct {

@@ -5,13 +5,13 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/spinup-host/spinup/config"
 	"strconv"
 
 	"github.com/docker/docker/api/types"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	"github.com/spinup-host/spinup/config"
 	ds "github.com/spinup-host/spinup/internal/dockerservice"
 )
 

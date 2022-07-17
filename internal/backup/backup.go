@@ -20,14 +20,14 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
+
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/postgres"
 	"github.com/spinup-host/spinup/misc"
 	"github.com/spinup-host/spinup/utils"
-
-	"go.uber.org/zap"
 )
 
 const PREFIXBACKUPCONTAINER = "spinup-postgres-backup-"

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"go.uber.org/multierr"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,13 +13,15 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/multierr"
+	"go.uber.org/zap"
+
 	"github.com/spinup-host/spinup/config"
 	ds "github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 type testDocker struct {

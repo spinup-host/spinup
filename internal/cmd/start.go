@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/spinup-host/spinup/internal/metastore"
-	"github.com/spinup-host/spinup/internal/service"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -32,7 +30,9 @@ import (
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/backup"
 	"github.com/spinup-host/spinup/internal/dockerservice"
+	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
+	"github.com/spinup-host/spinup/internal/service"
 	"github.com/spinup-host/spinup/metrics"
 	"github.com/spinup-host/spinup/utils"
 )

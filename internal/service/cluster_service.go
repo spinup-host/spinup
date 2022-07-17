@@ -3,13 +3,15 @@ package service
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
+
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
 	"github.com/spinup-host/spinup/internal/postgres"
-	"go.uber.org/zap"
 )
 
 type Service struct {

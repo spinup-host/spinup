@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	"github.com/spinup-host/spinup/internal/metastore"
 )
 
