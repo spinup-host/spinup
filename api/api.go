@@ -19,7 +19,7 @@ func NewClusterHandler(clusterService clusterService, logger *zap.Logger) (Clust
 	}, nil
 }
 
-// respond converts its data parameter to JSON and send it as an HTTP response
+// respond converts its data parameter to JSON and send it as an HTTP response.
 func respond(statusCode int, w http.ResponseWriter, data interface{}) {
 	if statusCode == http.StatusNoContent {
 		w.WriteHeader(statusCode)
