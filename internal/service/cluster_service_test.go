@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +25,10 @@ import (
 	"github.com/spinup-host/spinup/internal/monitor"
 )
 
+var (
+	maxPort = 60000
+	minPort = 10000
+)
 type testDocker struct {
 	ds.Docker
 }
@@ -102,6 +107,7 @@ func TestCreateService(t *testing.T) {
 		assert.NoError(t, dc.cleanup())
 	})
 
+	rand.Seed(time.Now().UnixNano())
 	cfg := config.Configuration{
 		Common: struct {
 			Architecture string `yaml:"architecture"`
@@ -136,7 +142,7 @@ func TestCreateService(t *testing.T) {
 			Type: "postgres",
 			Host: "localhost",
 			Name: containerName,
-			Port: 19990,
+			Port: rand.Intn(maxPort - minPort) + minPort,
 			Username: "test",
 			Password: "test",
 			MajVersion: 13,
@@ -162,7 +168,7 @@ func TestCreateService(t *testing.T) {
 			Type: "postgres",
 			Host: "localhost",
 			Name: containerName,
-			Port: 19991,
+			Port: rand.Intn(maxPort - minPort) + minPort,
 			Username: "test",
 			Password: "test",
 			MajVersion: 13,

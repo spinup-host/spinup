@@ -37,23 +37,26 @@ func ValidateUser(authHeader string, apiKeyHeader string) (string, error) {
 	if authHeader == "" && apiKeyHeader == "" {
 		return "", errors.New("no authorization keys found")
 	}
-	if apiKeyHeader == "" {
-		userId, err := ValidateToken(authHeader)
-		if err != nil {
-			log.Printf("error validating token %v", authHeader)
-			return "", errors.New("error validating token")
-		}
-		return userId, nil
-	}
 
-	if authHeader == "" {
-		err := ValidateApiKey(apiKeyHeader)
-		if err != nil {
+	if apiKeyHeader != "" {
+		if err := ValidateApiKey(apiKeyHeader); err != nil {
 			log.Printf("error validating api-key %v", apiKeyHeader)
 			return "", errors.New("error validating api-key")
+		} else {
+			return "testuser", nil
 		}
 	}
-	return "testuser", nil
+
+	if authHeader != "" {
+		if userId, err := ValidateToken(authHeader); err != nil {
+			log.Printf("error validating token %v", authHeader)
+			return "", errors.New("error validating token")
+		} else {
+			return userId, nil
+		}
+	}
+
+	return "testuser", errors.New("could not validate authentication headers")
 }
 
 func ValidateApiKey(apiKeyHeader string) error {

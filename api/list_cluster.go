@@ -24,7 +24,9 @@ func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 	_, err = config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
 		c.logger.Error("validating user", zap.Error(err))
-		http.Error(w, "error validating user", http.StatusUnauthorized)
+		respond(http.StatusUnauthorized, w, map[string]string{
+			"message": "unauthorized",
+		})
 		return
 	}
 	clustersInfo, err := c.svc.ListClusters(req.Context())
