@@ -39,7 +39,7 @@ type Service struct {
 	UserID   string
 	// one of arm64v8 or arm32v7 or amd64
 	Architecture string
-	//Port         uint
+
 	Db            dbCluster
 	DockerNetwork string
 	Version       version

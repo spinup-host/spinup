@@ -33,7 +33,7 @@ func stringToJWT(text string) (string, error) {
 	return jwt, nil
 }
 
-// TODO: vicky to remove this handler after the testing
+// TODO: vicky to remove this handler after the testing.
 func JWT(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	data := query.Get("data")

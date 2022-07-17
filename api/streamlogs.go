@@ -137,7 +137,7 @@ func Logs(w http.ResponseWriter, r *http.Request) {
 		p = []byte(err.Error())
 		lastMod = time.Unix(0, 0)
 	}
-	var v = struct {
+	v := struct {
 		Host    string
 		Data    string
 		LastMod string

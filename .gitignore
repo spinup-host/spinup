@@ -1,11 +1,11 @@
 .vscode
-Makefile
 *.service
 app.rsa
 app.rsa.pub
 spinup-host
 config.yaml
 testuser
+bin
 prom_data
 metastore.db
 prometheus.yml

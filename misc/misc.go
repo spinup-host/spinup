@@ -66,7 +66,7 @@ func GetContainerIdByName(name string) (string, error) {
 	return string(out.String()), nil
 }
 
-// SliceContainsString returns true if str present in s
+// SliceContainsString returns true if str present in s.
 func SliceContainsString(s []string, str string) bool {
 	for _, v := range s {
 		if v == str {
