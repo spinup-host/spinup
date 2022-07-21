@@ -74,7 +74,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "provided database type is not supported", http.StatusBadRequest)
 		return
 	}
-	s.Db.Port, err = misc.Portcheck()
+	port, err := misc.Portcheck()
 	if err != nil {
 		c.logger.Error("port issue", zap.Error(err))
 		http.Error(w, "port issue", 500)
@@ -89,7 +89,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		Name:         s.Db.Name,
 		Username:     s.Db.Username,
 		Password:     s.Db.Password,
-		Port:         s.Db.Port,
+		Port:         port,
 		MajVersion:   int(s.Version.Maj),
 		MinVersion:   int(s.Version.Min),
 		Monitoring:   s.Db.Monitoring,
