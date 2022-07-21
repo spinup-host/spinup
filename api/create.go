@@ -2,7 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -14,35 +14,31 @@ import (
 	"github.com/spinup-host/spinup/misc"
 )
 
-// Service is used to parse request from JSON payload
+// Cluster is used to parse request from JSON payload
 // todo merge with metastore.ClusterInfo
-type Service struct {
-	UserID   string
+type Cluster struct {
+	UserID string `json:"userId"`
 	// one of arm64v8 or arm32v7 or amd64
-	Architecture string
-	//Port         uint
-	Db            dbCluster
-	DockerNetwork string
-	Version       version
+	Architecture string    `json:"architecture"`
+	Db           dbCluster `json:"db"`
+	Version      version   `json:"version"`
 }
 
 type version struct {
-	Maj uint
-	Min uint
+	Maj uint `json:"maj"`
+	Min uint `json:"min"`
 }
 type dbCluster struct {
-	Name     string
-	ID       string
-	Type     string
-	Port     int
-	Username string
-	Password string
+	Name     string `json:"name"`
+	ID       string `json:"id,omitempty"`
+	Type     string `json:"type"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 
-	Memory     int64
-	CPU        int64
-	Monitoring string
+	Memory     int64  `json:"memory,omitempty"`
+	CPU        int64  `json:"cpu,omitempty"`
+	Monitoring string `json:"monitoring"`
 }
-
 
 func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) {
 	if (*req).Method != "POST" {
@@ -58,18 +54,18 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
-	var s Service
+	var s Cluster
 
-	byteArray, err := ioutil.ReadAll(req.Body)
+	byteArray, err := io.ReadAll(req.Body)
 	if err != nil {
 		c.logger.Error("error reading request body", zap.Error(err))
-		http.Error(w,"error reading request body", http.StatusInternalServerError)
+		http.Error(w, "error reading request body", http.StatusInternalServerError)
 		return
 	}
 	err = json.Unmarshal(byteArray, &s)
 	if err != nil {
 		c.logger.Error("parsing request", zap.Error(err))
-		http.Error(w,"error reading request body", http.StatusBadRequest)
+		http.Error(w, "error reading request body", http.StatusBadRequest)
 		return
 	}
 
@@ -88,15 +84,15 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 
 	cluster := metastore.ClusterInfo{
 		Architecture: s.Architecture,
-		Type: s.Db.Type,
-		Host: "localhost",
-		Name: s.Db.Name,
-		Username: s.Db.Username,
-		Password: s.Db.Password,
-		Port: s.Db.Port,
-		MajVersion: int(s.Version.Maj),
-		MinVersion: int(s.Version.Min),
-		Monitoring: s.Db.Monitoring,
+		Type:         s.Db.Type,
+		Host:         "localhost",
+		Name:         s.Db.Name,
+		Username:     s.Db.Username,
+		Password:     s.Db.Password,
+		Port:         s.Db.Port,
+		MajVersion:   int(s.Version.Maj),
+		MinVersion:   int(s.Version.Min),
+		Monitoring:   s.Db.Monitoring,
 	}
 
 	if err := c.svc.CreateService(req.Context(), &cluster); err != nil {

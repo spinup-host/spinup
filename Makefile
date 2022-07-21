@@ -39,6 +39,7 @@ install-deps:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
 	go install github.com/vektra/mockery/v2@v2.14.0
 	go install github.com/daixiang0/gci@v0.4.2
+	go install github.com/go-swagger/go-swagger/cmd/swagger@v0.29.0
 	@echo 'Dev dependencies have been installed. Run "export PATH=$$PATH/$$(go env GOPATH)/bin" to use installed binaries.'
 
 run-api:
@@ -46,6 +47,12 @@ run-api:
 
 checks:  ## Run all available checks and linters
 	# golangci-lint run --enable-all # disable golangci-lint for now as it can get annoying
+
+docs: 	## Generate OpenAPI docs
+	swagger generate spec -o openapi/swagger.yaml --scan-models --exclude-deps
+
+serve-docs:
+	swagger serve -F=swagger openapi/swagger.yaml
 
 
 help: ## Show make commands help.
