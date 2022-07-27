@@ -20,6 +20,7 @@ import (
 const (
 	PgExporterPrefix = "spinup-postgres-exporter"
 	PrometheusPrefix = "spinup-prometheus"
+	GrafanaPrefix    = "spinup-grafana"
 )
 
 var ErrNoMatchingEnv = fmt.Errorf("no matching environment variable")

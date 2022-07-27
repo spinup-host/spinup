@@ -21,13 +21,14 @@ const (
 
 // Runtime wraps runtime configuration and state of the monitoring service
 type Runtime struct {
-	targets             []*Target
-	pgExporterName      string
-	prometheusName      string
-	pgExporterContainer *ds.Container
-	prometheusContainer *ds.Container
-	dockerClient        ds.Docker
-	dockerHostAddr      string
+	targets              []*Target
+	pgExporterName       string
+	prometheusName       string
+	grafanaContainerName string
+	pgExporterContainer  *ds.Container
+	prometheusContainer  *ds.Container
+	dockerClient         ds.Docker
+	dockerHostAddr       string
 
 	appConfig config.Configuration
 	logger    *zap.Logger
@@ -49,14 +50,16 @@ func WithAppConfig(cfg config.Configuration) RuntimeOptions {
 
 func NewRuntime(dockerClient ds.Docker, opts ...RuntimeOptions) *Runtime {
 	rt := &Runtime{
-		targets:        make([]*Target, 0),
-		dockerClient:   dockerClient,
-		pgExporterName: ds.PgExporterPrefix,
-		prometheusName: ds.PrometheusPrefix,
+		targets:              make([]*Target, 0),
+		dockerClient:         dockerClient,
+		pgExporterName:       ds.PgExporterPrefix,
+		prometheusName:       ds.PrometheusPrefix,
+		grafanaContainerName: ds.GrafanaPrefix,
 	}
 	if dockerClient.NetworkName != "" {
 		rt.pgExporterName = ds.PgExporterPrefix + "-" + dockerClient.NetworkName
 		rt.prometheusName = ds.PrometheusPrefix + "-" + dockerClient.NetworkName
+		rt.grafanaContainerName = ds.GrafanaPrefix + "-" + dockerClient.NetworkName
 	}
 
 	for _, opt := range opts {

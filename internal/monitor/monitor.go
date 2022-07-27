@@ -105,6 +105,27 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 		}
 	}
 
+	gfContainer, err := r.dockerClient.GetContainer(ctx, r.grafanaContainerName)
+	if err != nil {
+		return err
+	}
+	if err == nil && gfContainer == nil {
+		pgExporterContainer, err = r.newGrafanaContainer()
+		if err != nil {
+			return err
+		}
+		_, err = pgExporterContainer.Start(ctx, r.dockerClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to start grafana container")
+		}
+	} else {
+		r.logger.Info("reusing existing grafana container")
+		err = gfContainer.StartExisting(ctx, r.dockerClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to start existing grafana container")
+		}
+	}
+
 	r.logger.Info(fmt.Sprintf("using docker host address :%s", r.dockerHostAddr))
 	r.pgExporterContainer = pgExporterContainer
 	r.prometheusContainer = promContainer
@@ -185,6 +206,29 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 		nwConfig,
 	)
 	return &promContainer, nil
+}
+
+func (r *Runtime) newGrafanaContainer() (*dockerservice.Container, error) {
+	endpointConfig := map[string]*network.EndpointSettings{}
+	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
+	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
+
+	image := "grafana/grafana-oss:9.0.5"
+	gfContainer := dockerservice.NewContainer(
+		r.grafanaContainerName, container.Config{
+			Image: image,
+		},
+		container.HostConfig{
+			PortBindings: nat.PortMap{
+				nat.Port("3000/tcp"): []nat.PortBinding{{
+					HostIP:   "0.0.0.0",
+					HostPort: "9091",
+				}},
+			},
+		},
+		nwConfig,
+	)
+	return &gfContainer, nil
 }
 
 func (r *Runtime) getPromConfigPath() (string, error) {
