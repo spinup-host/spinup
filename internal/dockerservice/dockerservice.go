@@ -47,16 +47,17 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 		// TODO: name of the container has prefixed with "/"
 		// I have hardcoded here; perhaps there is a better way to handle this
 		if misc.SliceContainsString(match.Names, "/"+name) {
-			data, err := d.Cli.ContainerInspect(ctx, match.ID)
+			data, err := d.Cli.ContainerInspect(ctx, "/"+name)
 			if err != nil {
 				return nil, errors.Wrapf(err, "getting data for container %s", match.ID)
 			}
-
 			c := &Container{
 				ID:     match.ID,
 				Name:   name,
 				State:  match.State,
 				Config: *data.Config,
+				// note that if the container is stopped, network info will be empty and won't be populated
+				// until you call one of Start(), Restart(), or StartExisting().
 				NetworkConfig: network.NetworkingConfig{
 					EndpointsConfig: data.NetworkSettings.Networks,
 				},

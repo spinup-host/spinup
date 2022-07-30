@@ -34,7 +34,18 @@ export CLIENT_SECRET=<GITHUB_CLIENT_SECRET>
 ```bash
 export SPINUP_API_KEY=<YOUR_API_KEY>
 ```
+## Monitoring
+With monitoring enabled, Spinup will automatically setup monitoring services (Prometheus, Postgres Exporter, and Grafana) 
+for you on startup. Every new database you add will automatically be added to postgres exporter for scraping and its metrics exposed in Prometheus/Grafana.
 
+To enable monitoring, set the `common.monitoring` field in your spinup config file to `true` (or add it if it doesn't exist).
+*Note that `common.monitoring` above implies the `monitoring` field in the `common` section in the YAML file*
+When monitoring is enabled, the monitoring services are started as follows:
+- Prometheus - http://localhost:9090
+- Grafana - http://localhost:9091
+- Postgres Exporter - http://localhost:9187
+
+## Backups
 ### Others
 
 **To create a private key**
