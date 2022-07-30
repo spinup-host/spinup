@@ -98,6 +98,15 @@ func (c *Container) StartExisting(ctx context.Context, d Docker) error {
 	return nil
 }
 
+// Restart restarts a docker container.
+func (c *Container) Restart(ctx context.Context, d Docker) error {
+	err := d.Cli.ContainerRestart(ctx, c.ID, nil)
+	if err != nil {
+		return errors.Wrapf(err, "unable to restart container: %s", c.ID)
+	}
+	return nil
+}
+
 // imageExistsLocally returns a boolean indicating if an image with the
 // requested name exists in the local docker image store
 func imageExistsLocally(ctx context.Context, d Docker, imageName string) (bool, error) {

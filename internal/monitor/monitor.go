@@ -34,6 +34,7 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 	var err error
 	var promContainer *dockerservice.Container
 	var pgExporterContainer *dockerservice.Container
+	var gfContainer *dockerservice.Container
 
 	defer func() {
 		if err != nil {
@@ -45,6 +46,11 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 			if pgExporterContainer != nil {
 				stopErr := pgExporterContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{})
 				r.logger.Error("stopping exporter container", zap.Error(stopErr))
+			}
+
+			if gfContainer != nil {
+				stopErr := gfContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{})
+				r.logger.Error("stopping grafana container", zap.Error(stopErr))
 			}
 		}
 	}()
@@ -105,7 +111,7 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 		}
 	}
 
-	gfContainer, err := r.dockerClient.GetContainer(ctx, r.grafanaContainerName)
+	gfContainer, err = r.dockerClient.GetContainer(ctx, r.grafanaContainerName)
 	if err != nil {
 		return err
 	}
@@ -123,16 +129,19 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to start grafana container")
 		}
-		if err = r.writeGrafanaConfig(gfConfigPath); err != nil {
-			return errors.Wrap(err, "failed to update prometheus config")
-		}
-		//todo(idoqo): grafana needs to be restarted after new config
 	} else {
 		r.logger.Info("reusing existing grafana container")
 		err = gfContainer.StartExisting(ctx, r.dockerClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to start existing grafana container")
 		}
+	}
+	r.dockerHostAddr = gfContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
+	if err = r.writeGrafanaConfig(gfConfigPath); err != nil {
+		return errors.Wrap(err, "failed to update prometheus config")
+	}
+	if err = gfContainer.Restart(ctx, r.dockerClient); err != nil {
+		return err
 	}
 
 	r.logger.Info(fmt.Sprintf("using docker host address :%s", r.dockerHostAddr))
@@ -227,10 +236,6 @@ func (r *Runtime) newGrafanaContainer(gfConfigPath string) (*dockerservice.Conta
 			Type:   mount.TypeBind,
 			Source: gfConfigPath,
 			Target: "/etc/grafana/provisioning/datasources/prometheus-grafana.yml",
-		}, {
-			Type:   mount.TypeBind,
-			Source: gfConfigPath,
-			Target: "/usr/share/grafana/conf/provisioning/datasources/prometheus-grafana.yml",
 		},
 	}
 
@@ -297,14 +302,15 @@ func (r *Runtime) writeGrafanaConfig(cfgPath string) error {
 apiVersion: 1
 
 datasources:
-- name: prometheusdata
+- name: Prometheus'
   type: prometheus
-  access: direct
+  access: 'proxy'
   orgId: 1
-  url: %s
+  url: http://%s
   isDefault: true
   version: 1
-  editable: true`, net.JoinHostPort(r.dockerHostAddr, "9090"))
+  editable: true
+`, net.JoinHostPort(r.dockerHostAddr, "9090"))
 
 	if err := os.WriteFile(cfgPath, []byte(cfg), 0644); err != nil {
 		return errors.Wrap(err, "creating grafana config")
