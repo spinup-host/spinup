@@ -109,15 +109,24 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	gfConfigPath, err := r.getGrafanaConfigPath()
+	if err != nil {
+		return errors.Wrap(err, "failed to read grafana config")
+	}
+
 	if err == nil && gfContainer == nil {
-		pgExporterContainer, err = r.newGrafanaContainer()
+		gfContainer, err = r.newGrafanaContainer(gfConfigPath)
 		if err != nil {
 			return err
 		}
-		_, err = pgExporterContainer.Start(ctx, r.dockerClient)
+		_, err = gfContainer.Start(ctx, r.dockerClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to start grafana container")
 		}
+		if err = r.writeGrafanaConfig(gfConfigPath); err != nil {
+			return errors.Wrap(err, "failed to update prometheus config")
+		}
+		//todo(idoqo): grafana needs to be restarted after new config
 	} else {
 		r.logger.Info("reusing existing grafana container")
 		err = gfContainer.StartExisting(ctx, r.dockerClient)
@@ -208,10 +217,22 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	return &promContainer, nil
 }
 
-func (r *Runtime) newGrafanaContainer() (*dockerservice.Container, error) {
+func (r *Runtime) newGrafanaContainer(gfConfigPath string) (*dockerservice.Container, error) {
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
+
+	mounts := []mount.Mount{
+		{
+			Type:   mount.TypeBind,
+			Source: gfConfigPath,
+			Target: "/etc/grafana/provisioning/datasources/prometheus-grafana.yml",
+		}, {
+			Type:   mount.TypeBind,
+			Source: gfConfigPath,
+			Target: "/usr/share/grafana/conf/provisioning/datasources/prometheus-grafana.yml",
+		},
+	}
 
 	image := "grafana/grafana-oss:9.0.5"
 	gfContainer := dockerservice.NewContainer(
@@ -225,6 +246,7 @@ func (r *Runtime) newGrafanaContainer() (*dockerservice.Container, error) {
 					HostPort: "9091",
 				}},
 			},
+			Mounts: mounts,
 		},
 		nwConfig,
 	)
@@ -256,6 +278,36 @@ func (r *Runtime) writePromConfig(cfgPath string) error {
 `, net.JoinHostPort(r.dockerHostAddr, "9090"), net.JoinHostPort(r.dockerHostAddr, "9187"))
 	if err := os.WriteFile(cfgPath, []byte(cfg), 0644); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *Runtime) getGrafanaConfigPath() (string, error) {
+	cfgPath := filepath.Join(r.appConfig.Common.ProjectDir, "prometheus-grafana.yml")
+	_, err := os.Open(cfgPath)
+	if errors.Is(err, os.ErrNotExist) {
+		_, err = os.Create(cfgPath)
+	}
+
+	return cfgPath, err
+}
+
+func (r *Runtime) writeGrafanaConfig(cfgPath string) error {
+	cfg := fmt.Sprintf(`# prometheus provisioning file for grafana
+apiVersion: 1
+
+datasources:
+- name: prometheusdata
+  type: prometheus
+  access: direct
+  orgId: 1
+  url: %s
+  isDefault: true
+  version: 1
+  editable: true`, net.JoinHostPort(r.dockerHostAddr, "9090"))
+
+	if err := os.WriteFile(cfgPath, []byte(cfg), 0644); err != nil {
+		return errors.Wrap(err, "creating grafana config")
 	}
 	return nil
 }
