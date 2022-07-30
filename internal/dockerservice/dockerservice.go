@@ -47,7 +47,7 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 		// TODO: name of the container has prefixed with "/"
 		// I have hardcoded here; perhaps there is a better way to handle this
 		if misc.SliceContainsString(match.Names, "/"+name) {
-			data, err := d.Cli.ContainerInspect(ctx, "/"+name)
+			data, err := d.Cli.ContainerInspect(ctx, match.ID)
 			if err != nil {
 				return nil, errors.Wrapf(err, "getting data for container %s", match.ID)
 			}
