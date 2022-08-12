@@ -51,6 +51,9 @@ checks:  ## Run all available checks and linters
 stop-services: ## Removes all running containers in the Spinup network
 	docker stop $(shell docker container ls --filter="network=${DOCKER_NETWORK}" -q --all)
 
+remove-services: ## Removes all running containers in the Spinup network
+	docker rm $(shell docker container ls --filter="network=${DOCKER_NETWORK}" -q --all)
+
 
 help: ## Show make commands help.
 	@echo ''

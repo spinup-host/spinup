@@ -45,7 +45,7 @@ When monitoring is enabled, the monitoring services are started as follows:
 - Grafana - http://localhost:9091
 - Postgres Exporter - http://localhost:9187
 
-Visit http://localhost:9091/explore o explore the provisioned Prometheus in Grafana,
+Visit http://localhost:9091/explore to explore the provisioned Prometheus in Grafana,
 
 ## Backups
 ### Others
