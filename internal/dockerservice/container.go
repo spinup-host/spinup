@@ -20,6 +20,7 @@ import (
 const (
 	PgExporterPrefix = "spinup-postgres-exporter"
 	PrometheusPrefix = "spinup-prometheus"
+	GrafanaPrefix    = "spinup-grafana"
 )
 
 var ErrNoMatchingEnv = fmt.Errorf("no matching environment variable")
@@ -94,6 +95,34 @@ func (c *Container) StartExisting(ctx context.Context, d Docker) error {
 	if err != nil {
 		return errors.Wrapf(err, "unable to start container %s", c.ID)
 	}
+	data, err := d.Cli.ContainerInspect(ctx, c.ID)
+	if err != nil {
+		return errors.Wrapf(err, "getting data for container %s", c.ID)
+	}
+	
+	c.Config = *data.Config
+	c.NetworkConfig = network.NetworkingConfig{
+		EndpointsConfig: data.NetworkSettings.Networks,
+	}
+	return nil
+}
+
+// Restart restarts a docker container.
+func (c *Container) Restart(ctx context.Context, d Docker) error {
+	err := d.Cli.ContainerRestart(ctx, c.ID, nil)
+	if err != nil {
+		return errors.Wrapf(err, "unable to restart container: %s", c.ID)
+	}
+	data, err := d.Cli.ContainerInspect(ctx, c.ID)
+	if err != nil {
+		return errors.Wrapf(err, "getting data for container %s", c.ID)
+	}
+
+	c.Config = *data.Config
+	c.NetworkConfig = network.NetworkingConfig{
+		EndpointsConfig: data.NetworkSettings.Networks,
+	}
+
 	return nil
 }
 
