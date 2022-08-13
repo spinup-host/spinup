@@ -65,103 +65,121 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 		}
 	}()
 
-	{
-		promContainer, err = r.dockerClient.GetContainer(ctx, r.prometheusName)
-		if err != nil {
-			return err
-		}
-
-		if err == nil && promContainer == nil {
-			promCfgPath, err := r.getPromConfigPath()
-			if err != nil {
-				return errors.Wrap(err, "failed to mount prometheus config")
-			}
-			promContainer, err = r.newPrometheusContainer(promCfgPath)
-			if err != nil {
-				return err
-			}
-			_, err = promContainer.Start(ctx, r.dockerClient)
-			if err != nil {
-				return errors.Wrap(err, "failed to start prometheus container")
-			}
-
-			// we expect all containers to have the same gateway IP, but we assign it here
-			// so that we can update the prometheus config with the right IP of targets
-			r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
-			if err = r.writePromConfig(promCfgPath); err != nil {
-				return errors.Wrap(err, "failed to update prometheus config")
-			}
-		} else {
-			// if the container exists, we only update the host address without over-writing the existing prometheus config
-			r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
-			r.logger.Info("reusing existing prometheus container")
-			err = promContainer.StartExisting(ctx, r.dockerClient)
-			if err != nil {
-				return errors.Wrap(err, "failed to start existing prometheus container")
-			}
-		}
+	if promContainer, err = r.setupPrometheusContainer(ctx); err != nil {
+		r.logger.Error("failed to start prometheus container", zap.Error(err))
+		return err
 	}
-	{
-		pgExporterContainer, err = r.dockerClient.GetContainer(ctx, r.pgExporterName)
-		if err != nil {
-			return err
-		}
-		if err == nil && pgExporterContainer == nil {
-			pgExporterContainer, err = r.newPostgresExporterContainer("")
-			if err != nil {
-				return err
-			}
-			_, err = pgExporterContainer.Start(ctx, r.dockerClient)
-			if err != nil {
-				return errors.Wrap(err, "failed to start pg_exporter container")
-			}
-		} else {
-			r.logger.Info("reusing existing postgres_exporter container")
-			err = pgExporterContainer.StartExisting(ctx, r.dockerClient)
-			if err != nil {
-				return errors.Wrap(err, "failed to start existing pg_exporter container")
-			}
-		}
+	if pgExporterContainer, err = r.setupPgExporterContainer(ctx); err != nil {
+		r.logger.Error("failed to start postgres exporter container", zap.Error(err))
+		return err
 	}
-	{
-		gfContainer, err = r.dockerClient.GetContainer(ctx, r.grafanaContainerName)
-		if err != nil {
-			return err
-		}
-		sourceDir, dashboardDir, err := r.grafanaConfigDir()
-		if err != nil {
-			return errors.Wrap(err, "failed to read grafana config")
-		}
-
-		if err == nil && gfContainer == nil {
-			gfContainer, err = r.newGrafanaContainer(sourceDir, dashboardDir)
-			if err != nil {
-				return err
-			}
-			_, err = gfContainer.Start(ctx, r.dockerClient)
-			if err != nil {
-				return errors.Wrap(err, "start grafana container")
-			}
-			if err = r.writeGrafanaConfig(sourceDir, dashboardDir); err != nil {
-				return errors.Wrap(err, "set up grafana config")
-			}
-			if err = gfContainer.Restart(ctx, r.dockerClient); err != nil {
-				return err
-			}
-		} else {
-			r.logger.Info("reusing existing grafana container")
-			err = gfContainer.StartExisting(ctx, r.dockerClient)
-			if err != nil {
-				return errors.Wrap(err, "start existing grafana container")
-			}
-		}
-		r.dockerHostAddr = gfContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
+	if gfContainer, err = r.setupGrafanaContainer(ctx); err != nil {
+		r.logger.Error("failed to start grafana container", zap.Error(err))
+		return err
 	}
 
 	r.logger.Info(fmt.Sprintf("using docker host address :%s", r.dockerHostAddr))
 	r.pgExporterContainer = pgExporterContainer
 	r.prometheusContainer = promContainer
 	return nil
+}
+
+func (r *Runtime) setupPrometheusContainer(ctx context.Context) (*dockerservice.Container, error) {
+	promContainer, err := r.dockerClient.GetContainer(ctx, r.prometheusName)
+	if err != nil {
+		return promContainer, err
+	}
+
+	if err == nil && promContainer == nil {
+		promCfgPath, err := r.getPromConfigPath()
+		if err != nil {
+			return promContainer, errors.Wrap(err, "failed to mount prometheus config")
+		}
+		promContainer, err = r.newPrometheusContainer(promCfgPath)
+		if err != nil {
+			return promContainer, err
+		}
+		_, err = promContainer.Start(ctx, r.dockerClient)
+		if err != nil {
+			return promContainer, errors.Wrap(err, "failed to start prometheus container")
+		}
+
+		// we expect all containers to have the same gateway IP, but we assign it here
+		// so that we can update the prometheus config with the right IP of targets
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
+		if err = r.writePromConfig(promCfgPath); err != nil {
+			return promContainer, errors.Wrap(err, "failed to update prometheus config")
+		}
+	} else {
+		// if the container exists, we only update the host address without over-writing the existing prometheus config
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
+		r.logger.Info("reusing existing prometheus container")
+		err = promContainer.StartExisting(ctx, r.dockerClient)
+		if err != nil {
+			return promContainer, errors.Wrap(err, "failed to start existing prometheus container")
+		}
+	}
+	return promContainer, nil
+}
+
+func (r *Runtime) setupPgExporterContainer(ctx context.Context) (*dockerservice.Container, error) {
+	pgExporterContainer, err := r.dockerClient.GetContainer(ctx, r.pgExporterName)
+	if err != nil {
+		return pgExporterContainer, err
+	}
+	if err == nil && pgExporterContainer == nil {
+		pgExporterContainer, err = r.newPostgresExporterContainer("")
+		if err != nil {
+			return pgExporterContainer, err
+		}
+		_, err = pgExporterContainer.Start(ctx, r.dockerClient)
+		if err != nil {
+			return pgExporterContainer, errors.Wrap(err, "failed to start pg_exporter container")
+		}
+	} else {
+		r.logger.Info("reusing existing postgres_exporter container")
+		err = pgExporterContainer.StartExisting(ctx, r.dockerClient)
+		if err != nil {
+			return pgExporterContainer, errors.Wrap(err, "failed to start existing pg_exporter container")
+		}
+	}
+	return pgExporterContainer, nil
+}
+
+func (r *Runtime) setupGrafanaContainer(ctx context.Context) (*dockerservice.Container, error) {
+	gfContainer, err := r.dockerClient.GetContainer(ctx, r.grafanaContainerName)
+	if err != nil {
+		return gfContainer, err
+	}
+	sourceDir, dashboardDir, err := r.grafanaConfigDir()
+	if err != nil {
+		return gfContainer, errors.Wrap(err, "failed to read grafana config")
+	}
+
+	if err == nil && gfContainer == nil {
+		gfContainer, err = r.newGrafanaContainer(sourceDir, dashboardDir)
+		if err != nil {
+			return gfContainer, err
+		}
+		_, err = gfContainer.Start(ctx, r.dockerClient)
+		if err != nil {
+			return gfContainer, errors.Wrap(err, "start grafana container")
+		}
+		if err = r.writeGrafanaConfig(sourceDir, dashboardDir); err != nil {
+			return gfContainer, errors.Wrap(err, "set up grafana config")
+		}
+		if err = gfContainer.Restart(ctx, r.dockerClient); err != nil {
+			return gfContainer, err
+		}
+	} else {
+		r.logger.Info("reusing existing grafana container")
+		err = gfContainer.StartExisting(ctx, r.dockerClient)
+		if err != nil {
+			return gfContainer, errors.Wrap(err, "start existing grafana container")
+		}
+	}
+	r.dockerHostAddr = gfContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
+	return gfContainer, nil
 }
 
 func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Container, error) {
