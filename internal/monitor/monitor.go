@@ -218,7 +218,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	image := "bitnami/prometheus"
 
 	promDataDir := filepath.Join(r.appConfig.Common.ProjectDir, "prom_data")
-	err := os.Mkdir(promDataDir, 0644)
+	err := os.Mkdir(promDataDir, 0750)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return &dockerservice.Container{}, errors.Wrap(err, "could not create prometheus data dir")
 	}
