@@ -242,7 +242,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 		r.prometheusName,
 		container.Config{
 			Image: image,
-			User:  "root",
+			User:  "1000:1000",
 		},
 		container.HostConfig{
 			PortBindings: nat.PortMap{
