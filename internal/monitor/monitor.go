@@ -112,12 +112,12 @@ func (r *Runtime) setupPrometheusContainer(ctx context.Context) (*dockerservice.
 		}
 	} else {
 		// if the container exists, we only update the host address without over-writing the existing prometheus config
-		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 		r.logger.Info("reusing existing prometheus container")
 		err = promContainer.StartExisting(ctx, r.dockerClient)
 		if err != nil {
 			return promContainer, errors.Wrap(err, "failed to start existing prometheus container")
 		}
+		r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 	}
 	return promContainer, nil
 }
@@ -143,6 +143,7 @@ func (r *Runtime) setupPgExporterContainer(ctx context.Context) (*dockerservice.
 			return pgExporterContainer, errors.Wrap(err, "failed to start existing pg_exporter container")
 		}
 	}
+	r.dockerHostAddr = pgExporterContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 	return pgExporterContainer, nil
 }
 
