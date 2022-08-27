@@ -25,7 +25,9 @@ type githubAccess struct {
 
 func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
+		respond(http.StatusMethodNotAllowed, w, map[string]string{
+			"message": "Invalid Method",
+		})
 		return
 	}
 	type userAuth struct {
@@ -41,7 +43,9 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	// TODO: format this to include best practices https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
 	err := json.NewDecoder(r.Body).Decode(&ua)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond(http.StatusBadRequest, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	log.Println("ua", ua)
@@ -54,7 +58,9 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	requestBodyJSON, err := json.Marshal(requestBodyMap)
 	if err != nil {
 		log.Printf("ERROR: marshalling github auth %v", requestBodyMap)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": "Internal Server Error",
+		})
 		return
 	}
 	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", bytes.NewBuffer(requestBodyJSON))
@@ -64,7 +70,9 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	client := http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	defer res.Body.Close()
@@ -76,7 +84,9 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	var ghAccessToken githubAccess
 	err = json.NewDecoder(res.Body).Decode(&ghAccessToken)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	githubUserDataURL := "https://api.github.com/user"
@@ -85,7 +95,9 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	client = http.Client{}
 	res, err = client.Do(req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	defer res.Body.Close()
@@ -93,18 +105,24 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	var u user
 	err = json.NewDecoder(res.Body).Decode(&u)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	JWTToken, err := stringToJWT(u.Username)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	u.JWTToken = JWTToken
 	userJSON, err := json.Marshal(u)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -113,13 +131,17 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 
 func AltAuth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
+		respond(http.StatusMethodNotAllowed, w, map[string]string{
+			"message": "Invalid Method",
+		})
 		return
 	}
 	apiKeyHeader := r.Header.Get("x-api-key")
 	_, err := config.ValidateUser("", apiKeyHeader)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		respond(http.StatusUnauthorized, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	w.Write([]byte("Valid Api Key"))

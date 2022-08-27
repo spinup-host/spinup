@@ -43,7 +43,9 @@ func JWT(w http.ResponseWriter, r *http.Request) {
 	}
 	jwtToken, err := stringToJWT(data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error(),
+		})
 		return
 	}
 	w.Write([]byte(jwtToken))
@@ -54,7 +56,8 @@ func JWTDecode(w http.ResponseWriter, r *http.Request) {
 	text, err := config.JWTToString(jwttoken)
 	if err != nil {
 		log.Printf("error jwtdecode %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": err.Error()})
 		return
 	}
 	w.Write([]byte(text))

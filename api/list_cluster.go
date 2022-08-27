@@ -15,7 +15,8 @@ import (
 
 func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 	if (*req).Method != "GET" {
-		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
+		respond(http.StatusMethodNotAllowed, w, map[string]string{
+			"message": "Invalid Method"})
 		return
 	}
 	authHeader := req.Header.Get("Authorization")
@@ -32,13 +33,17 @@ func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 	clustersInfo, err := c.svc.ListClusters(req.Context())
 	if err != nil {
 		c.logger.Error("reading from clusterInfo table: ", zap.Error(err))
-		http.Error(w, "reading from clusterInfo", http.StatusUnauthorized)
+		respond(http.StatusUnauthorized, w, map[string]string{
+			"message": "reading from clusterInfo",
+		})
 		return
 	}
 	clusterByte, err := json.Marshal(clustersInfo)
 	if err != nil {
 		c.logger.Error("parsing cluster info", zap.Error(err))
-		http.Error(w, "Internal server error ", 500)
+		respond(http.StatusInternalServerError, w, map[string]string{
+			"message": "error parsing cluster info",
+		})
 		return
 	}
 	w.Write(clusterByte)
