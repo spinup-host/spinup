@@ -3495,20 +3495,23 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
-        "current": {},
+        "auto": true,
+        "current": {
+          "selected": false,
+          "text": "<< .DefaultPgExporterInstance >>",
+          "value": "<< .DefaultPgExporterInstance >>"
+        },
+        "hide": 0,
+        "label": null,
+        "name": "Instance",
         "datasource": "DS_PROMETHEUS",
         "definition": "label_values({job=\"postgres-exporter\"}, instance)",
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
         "multi": false,
-        "name": "Instance",
         "options": [
           {
             "selected": true,
-            "text": "<<printf \"%q\" .DefaultPgExporterInstance >>",
-            "value": "<<printf \"%q\" .DefaultPgExporterInstance >>"
+            "text": "<< .DefaultPgExporterInstance >>",
+            "value": "<< .DefaultPgExporterInstance >>"
           }
         ],
         "query": "label_values({job=\"postgres-exporter\"}, instance)",

@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -377,7 +378,7 @@ providers:
 
 	datasourcePath := filepath.Join(datasourceDir, "prometheus-grafana.yaml")
 	dashboardPath := filepath.Join(dashboardDir, "spinup.yaml")
-	dashboardDefPath := filepath.Join(dashboardDir, "pg-exporter-dashboard.json")
+	dashboardDefFile := filepath.Join(dashboardDir, "pg-exporter-dashboard.json")
 
 	if err := os.WriteFile(datasourcePath, []byte(defaultDatasourceCfg), 0644); err != nil {
 		return errors.Wrap(err, "create grafana datasource config")
@@ -386,7 +387,25 @@ providers:
 		return errors.Wrap(err, "create grafana dashboard config")
 	}
 
-	if err := os.WriteFile(dashboardDefPath, []byte(defaultDashboardDef), 0644); err != nil {
+	tpl, err := template.New("exporter-file").Delims("<<", ">>").Parse(defaultDashboardDef)
+	if err != nil {
+		return errors.Wrap(err, "parsing dashboard definition")
+	}
+
+	// todo: dynamic port for exporter
+	exporterInstance := net.JoinHostPort(r.dockerHostAddr, "9187")
+	dashboardFile, err := os.Create(dashboardDefFile)
+	if err != nil {
+		return errors.Wrap(err, "creating dashboard file")
+	}
+
+	defer dashboardFile.Close()
+	params := struct {
+		DefaultPgExporterInstance string
+	}{
+		DefaultPgExporterInstance: exporterInstance,
+	}
+	if err = tpl.Execute(dashboardFile, params); err != nil {
 		return errors.Wrap(err, "create grafana dashboard definition")
 	}
 	return nil
