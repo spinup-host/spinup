@@ -3504,7 +3504,13 @@
         "label": null,
         "multi": false,
         "name": "Instance",
-        "options": [],
+        "options": [
+          {
+            "selected": true,
+            "text": "<<printf \"%q\" .DefaultPgExporterInstance >>",
+            "value": "<<printf \"%q\" .DefaultPgExporterInstance >>"
+          }
+        ],
         "query": "label_values({job=\"postgres-exporter\"}, instance)",
         "refresh": 1,
         "regex": "",
