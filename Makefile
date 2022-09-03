@@ -49,7 +49,6 @@ run-api:
 checks:  ## Run all available checks and linters
 	# golangci-lint run --enable-all # disable golangci-lint for now as it can get annoying
 
-<<<<<<< HEAD
 docs: 	## Generate OpenAPI docs
 	swagger generate spec -o openapi/swagger.yaml --scan-models --exclude-deps
 
