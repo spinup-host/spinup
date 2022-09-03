@@ -6,6 +6,8 @@ spinup-host
 config.yaml
 testuser
 bin
+spinup
 prom_data
+grafana
 metastore.db
 prometheus.yml
