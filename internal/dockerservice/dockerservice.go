@@ -51,12 +51,13 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 			if err != nil {
 				return nil, errors.Wrapf(err, "getting data for container %s", match.ID)
 			}
-
 			c := &Container{
 				ID:     match.ID,
 				Name:   name,
 				State:  match.State,
 				Config: *data.Config,
+				// note that if the container is stopped, network info will be empty and won't be populated
+				// until you call one of Start(), Restart(), or StartExisting().
 				NetworkConfig: network.NetworkingConfig{
 					EndpointsConfig: data.NetworkSettings.Networks,
 				},
@@ -68,17 +69,17 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 }
 
 // CreateNetwork creates a new Docker network.
-func (d Docker) CreateNetwork(ctx context.Context, name string) (types.NetworkCreateResponse, error) {
-	networkResponse, err := d.Cli.NetworkCreate(ctx, name, types.NetworkCreate{CheckDuplicate: true})
+func (d Docker) CreateNetwork(ctx context.Context) (types.NetworkCreateResponse, error) {
+	networkResponse, err := d.Cli.NetworkCreate(ctx, d.NetworkName, types.NetworkCreate{CheckDuplicate: true})
 	if err == nil {
 		return networkResponse, nil
 	}
 
-	if !strings.Contains(err.Error(), fmt.Sprintf("network with name %s already exists", name)) {
+	if !strings.Contains(err.Error(), fmt.Sprintf("network with name %s already exists", d.NetworkName)) {
 		return networkResponse, err
 	} else {
 		listFilters := filters.NewArgs()
-		listFilters.Add("name", name)
+		listFilters.Add("name", d.NetworkName)
 		networks, err := d.Cli.NetworkList(ctx, types.NetworkListOptions{Filters: listFilters})
 		if err != nil {
 			return networkResponse, err

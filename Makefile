@@ -1,6 +1,7 @@
 GOBIN ?= $(shell go env GOPATH)/bin
 BINARY_NAME ?= spinup
 VERSION ?= dev-unknown
+DOCKER_NETWORK ?= "spinup_services"
 
 SPINUP_BUILD_TAGS = -ldflags " \
 			-X 'github.com/spinup-host/spinup/build.Version=$(VERSION)' \
@@ -48,11 +49,18 @@ run-api:
 checks:  ## Run all available checks and linters
 	# golangci-lint run --enable-all # disable golangci-lint for now as it can get annoying
 
+<<<<<<< HEAD
 docs: 	## Generate OpenAPI docs
 	swagger generate spec -o openapi/swagger.yaml --scan-models --exclude-deps
 
 serve-docs:
 	swagger serve -F=swagger openapi/swagger.yaml
+
+stop-services: ## Removes all running containers in the Spinup network
+	docker stop $(shell docker container ls --filter="network=${DOCKER_NETWORK}" -q --all)
+
+remove-services: ## Removes all running containers in the Spinup network
+	docker rm $(shell docker container ls --filter="network=${DOCKER_NETWORK}" -q --all)
 
 
 help: ## Show make commands help.

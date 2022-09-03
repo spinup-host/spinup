@@ -42,7 +42,7 @@ type dbCluster struct {
 
 func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) {
 	if (*req).Method != "POST" {
-		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
+		respond(http.StatusMethodNotAllowed, w, map[string]string{"message": "Invalid Method"})
 		return
 	}
 	authHeader := req.Header.Get("Authorization")
@@ -51,7 +51,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	_, err := config.ValidateUser(authHeader, apiKeyHeader)
 	if err != nil {
 		c.logger.Error(err.Error())
-		http.Error(w, "error validating user", http.StatusUnauthorized)
+		respond(http.StatusUnauthorized, w, map[string]string{"message": "error validating user"})
 		return
 	}
 	var s Cluster
@@ -59,25 +59,25 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 	byteArray, err := io.ReadAll(req.Body)
 	if err != nil {
 		c.logger.Error("error reading request body", zap.Error(err))
-		http.Error(w, "error reading request body", http.StatusInternalServerError)
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "error reading request body"})
 		return
 	}
 	err = json.Unmarshal(byteArray, &s)
 	if err != nil {
 		c.logger.Error("parsing request", zap.Error(err))
-		http.Error(w, "error reading request body", http.StatusBadRequest)
+		respond(http.StatusBadRequest, w, map[string]string{"message": "error reading request body"})
 		return
 	}
 
 	if s.Db.Type != "postgres" {
 		c.logger.Error("unsupported database type")
-		http.Error(w, "provided database type is not supported", http.StatusBadRequest)
+		respond(http.StatusBadRequest, w, map[string]string{"message": "provided database type is not supported"})
 		return
 	}
 	port, err := misc.Portcheck()
 	if err != nil {
 		c.logger.Error("port issue", zap.Error(err))
-		http.Error(w, "port issue", 500)
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "port issue"})
 		return
 	}
 	s.Architecture = config.Cfg.Common.Architecture

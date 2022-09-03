@@ -29,6 +29,7 @@ var (
 	maxPort = 60000
 	minPort = 10000
 )
+
 type testDocker struct {
 	ds.Docker
 }
@@ -39,7 +40,7 @@ func newTestDocker(networkName string) (testDocker, error) {
 		return testDocker{}, fmt.Errorf("could not create docker client: %s", err.Error())
 	}
 
-	_, err = dc.CreateNetwork(context.Background(), networkName)
+	_, err = dc.CreateNetwork(context.Background())
 	if err != nil {
 		return testDocker{}, errors.Wrap(err, "create network")
 	}
@@ -61,7 +62,7 @@ func (td testDocker) cleanup() error {
 
 	var cleanupErr error
 	for _, c := range containers {
-		stopTimeout := 1*time.Second
+		stopTimeout := 1 * time.Second
 		if err = td.Cli.ContainerStop(ctx, c.ID, &stopTimeout); err != nil {
 			if strings.Contains(err.Error(), "No such container") {
 				continue
@@ -72,7 +73,7 @@ func (td testDocker) cleanup() error {
 			if strings.Contains(err.Error(), "No such container") {
 				continue
 			}
-			cleanupErr = multierr.Append(cleanupErr, errors.Wrap(err,"remove container"))
+			cleanupErr = multierr.Append(cleanupErr, errors.Wrap(err, "remove container"))
 		}
 
 		// cleanup its volumes
@@ -135,18 +136,18 @@ func TestCreateService(t *testing.T) {
 	svc := NewService(dc.Docker, store, rt, logger, cfg)
 
 	t.Run("without monitoring", func(t *testing.T) {
-		containerName := "test-db-"+uuid.New().String()
+		containerName := "test-db-" + uuid.New().String()
 		ctx := context.Background()
 		info := &metastore.ClusterInfo{
 			Architecture: "amd64",
-			Type: "postgres",
-			Host: "localhost",
-			Name: containerName,
-			Port: rand.Intn(maxPort - minPort) + minPort,
-			Username: "test",
-			Password: "test",
-			MajVersion: 13,
-			MinVersion: 6,
+			Type:         "postgres",
+			Host:         "localhost",
+			Name:         containerName,
+			Port:         rand.Intn(maxPort-minPort) + minPort,
+			Username:     "test",
+			Password:     "test",
+			MajVersion:   13,
+			MinVersion:   6,
 		}
 		err = svc.CreateService(ctx, info)
 		assert.NoError(t, err)
@@ -155,9 +156,9 @@ func TestCreateService(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "running", pg.State)
 	})
-	
+
 	t.Run("with monitoring", func(t *testing.T) {
-		containerName := "test-db-"+uuid.New().String()
+		containerName := "test-db-" + uuid.New().String()
 		ctx := context.Background()
 
 		err = svc.monitorRuntime.BootstrapServices(ctx)
@@ -165,17 +166,17 @@ func TestCreateService(t *testing.T) {
 
 		info := &metastore.ClusterInfo{
 			Architecture: "amd64",
-			Type: "postgres",
-			Host: "localhost",
-			Name: containerName,
-			Port: rand.Intn(maxPort - minPort) + minPort,
-			Username: "test",
-			Password: "test",
-			MajVersion: 13,
-			MinVersion: 6,
-			Monitoring: "enable",
+			Type:         "postgres",
+			Host:         "localhost",
+			Name:         containerName,
+			Port:         rand.Intn(maxPort-minPort) + minPort,
+			Username:     "test",
+			Password:     "test",
+			MajVersion:   13,
+			MinVersion:   6,
+			Monitoring:   "enable",
 		}
-		exporterName := ds.PgExporterPrefix + "-" +testID
+		exporterName := ds.PgExporterPrefix + "-" + testID
 		currentExporter, err := svc.dockerClient.GetContainer(ctx, exporterName)
 		assert.NoError(t, err)
 
@@ -185,6 +186,10 @@ func TestCreateService(t *testing.T) {
 		pgC, err := svc.dockerClient.GetContainer(ctx, "spinup-postgres-"+containerName)
 		assert.NoError(t, err)
 		assert.Equal(t, "running", pgC.State)
+
+		grafanaC, err := svc.dockerClient.GetContainer(ctx, ds.GrafanaPrefix+"-"+testID)
+		assert.NoError(t, err)
+		assert.Equal(t, "running", grafanaC.State)
 
 		// monitoring services are started in the background, so we try for a while before giving up
 		tries := uint32(0)
