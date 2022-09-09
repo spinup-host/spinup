@@ -166,7 +166,7 @@ func startCmd() *cobra.Command {
 							if !os.IsNotExist(err) {
 								utils.Logger.Error("could not find asset", zap.Error(err))
 							}
-							// Requested file does not exist so we return the default (resolves to index.html)
+							// Requested file does not exist, we return the default (resolves to index.html)
 							r.URL.Path = "/"
 						}
 					}
