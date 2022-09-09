@@ -124,11 +124,15 @@ func StreamLogs(w http.ResponseWriter, r *http.Request) {
 
 func Logs(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/logs" {
-		http.Error(w, "Not found", http.StatusNotFound)
+		respond(http.StatusNotFound, w, map[string]string{
+			"message": "Not found",
+		})
 		return
 	}
 	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		respond(http.StatusMethodNotAllowed, w, map[string]string{
+			"message": "method not allowed",
+		})
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
