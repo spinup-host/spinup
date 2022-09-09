@@ -27,11 +27,11 @@ func NewDocker(networkName string, opts ...client.Opt) (Docker, error) {
 	if err != nil {
 		fmt.Printf("error creating client %v", err)
 	}
-	//TODO: Check. Does this initialize and assign
 	return Docker{NetworkName: networkName, Cli: cli}, nil
 }
 
 var ErrDuplicateNetwork = errors.New("duplicate networks found with given name")
+var ErrDuplicateContainerName = errors.New("a container already exists with the given name")
 
 // GetContainer returns a docker container with the provided name (if any exists).
 // if no match exists, it returns a nil container and a nil error.

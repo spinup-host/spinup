@@ -2,8 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/pkg/errors"
+	"github.com/spinup-host/spinup/internal/dockerservice"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -100,15 +101,20 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 
 	if err := c.svc.CreateService(req.Context(), &cluster); err != nil {
 		c.logger.Error("failed to add create service", zap.Error(err))
+		if errors.Is(err, dockerservice.ErrDuplicateContainerName) {
+			respond(http.StatusBadRequest, w, map[string]string{"message": "container with provided name already exists"})
+		} else {
+			respond(http.StatusBadRequest, w, map[string]string{"message": "failed to add service"})
+		}
+		return
 	}
 
 	jsonBody, err := json.Marshal(cluster)
 	if err != nil {
-		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
-		misc.ErrorResponse(w, "Internal server error ", 500)
+		c.logger.Error("marshalling service response struct", zap.Error(err))
+		respond(http.StatusInternalServerError, w, "Internal server error")
 	} else {
-		w.Header().Set("Content-type", "application/json")
-		w.Write(jsonBody)
+		respond(http.StatusOK, w, jsonBody)
 	}
 	return
 }

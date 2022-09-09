@@ -2,27 +2,23 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/multierr"
 	"go.uber.org/zap"
 
 	"github.com/spinup-host/spinup/config"
 	ds "github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
+	"github.com/spinup-host/spinup/tests"
 )
 
 var (
@@ -30,71 +26,10 @@ var (
 	minPort = 10000
 )
 
-type testDocker struct {
-	ds.Docker
-}
-
-func newTestDocker(networkName string) (testDocker, error) {
-	dc, err := ds.NewDocker(networkName)
-	if err != nil {
-		return testDocker{}, fmt.Errorf("could not create docker client: %s", err.Error())
-	}
-
-	_, err = dc.CreateNetwork(context.Background())
-	if err != nil {
-		return testDocker{}, errors.Wrap(err, "create network")
-	}
-	return testDocker{
-		Docker: dc,
-	}, nil
-}
-
-// cleanup removes all containers and volumes in the docker network, and removes the network itself.
-func (td testDocker) cleanup() error {
-	ctx := context.Background()
-	filter := filters.NewArgs()
-	filter.Add("network", td.NetworkName)
-
-	containers, err := td.Cli.ContainerList(ctx, types.ContainerListOptions{All: true, Filters: filter})
-	if err != nil {
-		return errors.Wrap(err, "list containers")
-	}
-
-	var cleanupErr error
-	for _, c := range containers {
-		stopTimeout := 1 * time.Second
-		if err = td.Cli.ContainerStop(ctx, c.ID, &stopTimeout); err != nil {
-			if strings.Contains(err.Error(), "No such container") {
-				continue
-			}
-			cleanupErr = multierr.Append(cleanupErr, errors.Wrap(err, "stop container"))
-		}
-		if err = td.Cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{}); err != nil {
-			if strings.Contains(err.Error(), "No such container") {
-				continue
-			}
-			cleanupErr = multierr.Append(cleanupErr, errors.Wrap(err, "remove container"))
-		}
-
-		// cleanup its volumes
-		for _, mount := range c.Mounts {
-			if mount.Type == "volume" {
-				if err = td.Cli.VolumeRemove(ctx, mount.Name, true); err != nil {
-					cleanupErr = multierr.Append(cleanupErr, errors.Wrap(err, "remove volume"))
-				}
-			}
-		}
-	}
-
-	if err = td.Cli.NetworkRemove(ctx, td.NetworkName); err != nil {
-		cleanupErr = multierr.Append(cleanupErr, errors.Wrap(err, "remove network"))
-	}
-	return nil
-}
-
 func TestCreateService(t *testing.T) {
 	testID := uuid.New().String()
-	dc, err := newTestDocker(testID)
+	ctx := context.Background()
+	dc, err := tests.NewDockerTest(ctx, testID)
 	require.NoError(t, err)
 
 	store, path, err := newTestStore(testID)
@@ -105,7 +40,7 @@ func TestCreateService(t *testing.T) {
 
 	t.Cleanup(func() {
 		_ = os.Remove(path)
-		assert.NoError(t, dc.cleanup())
+		assert.NoError(t, dc.Cleanup())
 	})
 
 	rand.Seed(time.Now().UnixNano())
