@@ -21,6 +21,12 @@ import (
 	"github.com/spinup-host/spinup/misc"
 )
 
+const (
+	pgExporterImageTag = "quay.io/prometheuscommunity/postgres-exporter:v0.11.1"
+	grafanaImageTag    = "grafana/grafana-oss:9.0.5"
+	prometheusImageTag = "bitnami/prometheus:2.38.0"
+)
+
 var (
 	defaultDatasourceCfg string
 	defaultDashboardCfg  string
@@ -170,7 +176,6 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	image := "quay.io/prometheuscommunity/postgres-exporter"
 	env := []string{
 		misc.StringToDockerEnvVal("DATA_SOURCE_NAME", dsn),
 	}
@@ -179,7 +184,7 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 	postgresExporterContainer := dockerservice.NewContainer(
 		r.pgExporterName,
 		container.Config{
-			Image: image,
+			Image: pgExporterImageTag,
 			Env:   env,
 		},
 		container.HostConfig{
@@ -199,7 +204,6 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	image := "bitnami/prometheus"
 
 	promDataDir := filepath.Join(r.appConfig.Common.ProjectDir, "prom_data")
 	err := os.Mkdir(promDataDir, 0644)
@@ -225,7 +229,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	promContainer := dockerservice.NewContainer(
 		r.prometheusName,
 		container.Config{
-			Image: image,
+			Image: prometheusImageTag,
 			User:  "root",
 		},
 		container.HostConfig{
@@ -265,10 +269,9 @@ func (r *Runtime) newGrafanaContainer(datasourceDir, dashboardDir string) (*dock
 		},
 	}
 
-	image := "grafana/grafana-oss:9.0.5"
 	gfContainer := dockerservice.NewContainer(
 		r.grafanaContainerName, container.Config{
-			Image: image,
+			Image: grafanaImageTag,
 		},
 		container.HostConfig{
 			PortBindings: nat.PortMap{
