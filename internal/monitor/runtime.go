@@ -84,9 +84,9 @@ func (r *Runtime) AddTarget(ctx context.Context, t *Target) error {
 
 	var newDSN string
 	if oldDSN == "" {
-		newDSN = fmt.Sprintf("postgresql://%s:%s@%s:%s/?sslmode=disable", t.UserName, t.Password, r.dockerHostAddr, strconv.Itoa(t.Port))
+		newDSN = fmt.Sprintf("postgresql://%s:%s@%s:%s/?sslmode=disable", t.UserName, t.Password, t.ContainerName, strconv.Itoa(t.Port))
 	} else {
-		newDSN = fmt.Sprintf("%s,postgresql://%s:%s@%s:%s/?sslmode=disable", oldDSN, t.UserName, t.Password, r.dockerHostAddr, strconv.Itoa(t.Port))
+		newDSN = fmt.Sprintf("%s,postgresql://%s:%s@%s:%s/?sslmode=disable", oldDSN, t.UserName, t.Password, t.ContainerName, strconv.Itoa(t.Port))
 	}
 	newContainer, err := r.newPostgresExporterContainer(newDSN)
 	if err != nil {
