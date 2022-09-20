@@ -85,7 +85,7 @@
         "#d44a3a"
       ],
       "datasource": "DS_PROMETHEUS",
-      "description": "Source: pg_settings_server_version_num",
+      "description": "Source: server_version_num",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -626,7 +626,6 @@
         "ymax": null,
         "ymin": null
       },
-      "tableColumn": "{instance=\"db01vp-nbg6a.obs.noris.net:9187\", job=\"postgres-exporter\", server=\"213.95.132.73:5432\"}",
       "targets": [
         {
           "expr": "time()-(pg_postmaster_start_time_seconds{instance=\"$Instance\"})",
@@ -1080,7 +1079,6 @@
         "ymax": null,
         "ymin": null
       },
-      "tableColumn": "pg_settings_shared_buffers_bytes{instance=\"db01vp-nbg6a.obs.noris.net:9187\", job=\"postgres-exporter\", server=\"213.95.132.73:5432\"}",
       "targets": [
         {
           "expr": "pg_settings_shared_buffers_bytes{instance=\"$Instance\"}",
@@ -1169,7 +1167,6 @@
         "ymax": null,
         "ymin": null
       },
-      "tableColumn": "pg_settings_max_connections{instance=\"db01vp-nbg6a.obs.noris.net:9187\", job=\"postgres-exporter\", server=\"213.95.132.73:5432\"}",
       "targets": [
         {
           "expr": "pg_settings_max_connections{instance=\"$Instance\"}",
@@ -2323,7 +2320,6 @@
             "ymax": null,
             "ymin": null
           },
-          "tableColumn": "pg_stat_activity_count{datname=\"grafana\", instance=\"db01vp-nbg6a.obs.noris.net:9187\", job=\"postgres-exporter\", server=\"213.95.132.73:5432\", state=\"active\"}",
           "targets": [
             {
               "expr": "pg_stat_activity_count{state=\"active\",instance=\"$Instance\",datname=~\"$Database\"}",
@@ -2419,7 +2415,6 @@
             "ymax": null,
             "ymin": null
           },
-          "tableColumn": "pg_database_size{datname=\"grafana\", instance=\"db01vp-nbg6a.obs.noris.net:9187\", job=\"postgres-exporter\", server=\"213.95.132.73:5432\"}",
           "targets": [
             {
               "expr": "pg_database_size{instance=\"$Instance\",datname=\"$Database\"}",
@@ -3410,7 +3405,7 @@
           "linewidth": 1,
           "links": [
             {
-              "title": "PostgreSQL Ressources",
+              "title": "PostgreSQL Resources",
               "url": "https://www.postgresql.org/docs/current/runtime-config-resource.html"
             }
           ],
@@ -3495,17 +3490,26 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
-        "current": {},
+        "auto": true,
+        "current": {
+          "selected": false,
+          "text": "<< .DefaultPgExporterInstance >>",
+          "value": "<< .DefaultPgExporterInstance >>"
+        },
+        "hide": 0,
+        "label": null,
+        "name": "Instance",
         "datasource": "DS_PROMETHEUS",
         "definition": "label_values({job=\"postgres-exporter\"}, instance)",
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
         "multi": false,
-        "name": "Instance",
-        "options": [],
-        "query": "label_values({job=\"postgres-exporter\"}, instance)",
+        "options": [
+          {
+            "selected": true,
+            "text": "<< .DefaultPgExporterInstance >>",
+            "value": "<< .DefaultPgExporterInstance >>"
+          }
+        ],
+        "query": "label_values({job=\"pg_exporter\"}, instance)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -3558,8 +3562,8 @@
           },
           {
             "selected": false,
-            "text": "30sec",
-            "value": "30sec"
+            "text": "30s",
+            "value": "30s"
           },
           {
             "selected": false,
@@ -3583,11 +3587,6 @@
           },
           {
             "selected": false,
-            "text": "6h",
-            "value": "6h"
-          },
-          {
-            "selected": false,
             "text": "12h",
             "value": "12h"
           },
@@ -3597,7 +3596,7 @@
             "value": "1d"
           }
         ],
-        "query": "30sec,1m,10m,30m,1h,6h,12h,1d",
+        "query": "30s,1m,10m,30m,1h,6h,12h,1d",
         "queryValue": "",
         "refresh": 2,
         "skipUrlSync": false,

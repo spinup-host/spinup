@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -18,6 +19,12 @@ import (
 
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/misc"
+)
+
+const (
+	pgExporterImageTag = "quay.io/prometheuscommunity/postgres-exporter:v0.11.1"
+	grafanaImageTag    = "grafana/grafana-oss:9.0.5"
+	prometheusImageTag = "bitnami/prometheus:2.38.0"
 )
 
 var (
@@ -92,13 +99,13 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 				return errors.Wrap(err, "failed to update prometheus config")
 			}
 		} else {
-			// if the container exists, we only update the host address without over-writing the existing prometheus config
-			r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 			r.logger.Info("reusing existing prometheus container")
 			err = promContainer.StartExisting(ctx, r.dockerClient)
 			if err != nil {
 				return errors.Wrap(err, "failed to start existing prometheus container")
 			}
+			// if the container exists, we only update the host address without over-writing the existing prometheus config
+			r.dockerHostAddr = promContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 		}
 	}
 	{
@@ -122,6 +129,7 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 				return errors.Wrap(err, "failed to start existing pg_exporter container")
 			}
 		}
+		r.dockerHostAddr = pgExporterContainer.NetworkConfig.EndpointsConfig[r.dockerClient.NetworkName].Gateway
 	}
 	{
 		gfContainer, err = r.dockerClient.GetContainer(ctx, r.grafanaContainerName)
@@ -168,7 +176,6 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	image := "quay.io/prometheuscommunity/postgres-exporter"
 	env := []string{
 		misc.StringToDockerEnvVal("DATA_SOURCE_NAME", dsn),
 	}
@@ -177,7 +184,7 @@ func (r *Runtime) newPostgresExporterContainer(dsn string) (*dockerservice.Conta
 	postgresExporterContainer := dockerservice.NewContainer(
 		r.pgExporterName,
 		container.Config{
-			Image: image,
+			Image: pgExporterImageTag,
 			Env:   env,
 		},
 		container.HostConfig{
@@ -197,7 +204,6 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[r.dockerClient.NetworkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	image := "bitnami/prometheus"
 
 	promDataDir := filepath.Join(r.appConfig.Common.ProjectDir, "prom_data")
 	err := os.Mkdir(promDataDir, 0644)
@@ -223,7 +229,7 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 	promContainer := dockerservice.NewContainer(
 		r.prometheusName,
 		container.Config{
-			Image: image,
+			Image: prometheusImageTag,
 			User:  "root",
 		},
 		container.HostConfig{
@@ -263,10 +269,9 @@ func (r *Runtime) newGrafanaContainer(datasourceDir, dashboardDir string) (*dock
 		},
 	}
 
-	image := "grafana/grafana-oss:9.0.5"
 	gfContainer := dockerservice.NewContainer(
 		r.grafanaContainerName, container.Config{
-			Image: image,
+			Image: grafanaImageTag,
 		},
 		container.HostConfig{
 			PortBindings: nat.PortMap{
@@ -376,7 +381,7 @@ providers:
 
 	datasourcePath := filepath.Join(datasourceDir, "prometheus-grafana.yaml")
 	dashboardPath := filepath.Join(dashboardDir, "spinup.yaml")
-	dashboardDefPath := filepath.Join(dashboardDir, "pg-exporter-dashboard.json")
+	dashboardDefFile := filepath.Join(dashboardDir, "pg-exporter-dashboard.json")
 
 	if err := os.WriteFile(datasourcePath, []byte(defaultDatasourceCfg), 0644); err != nil {
 		return errors.Wrap(err, "create grafana datasource config")
@@ -385,7 +390,25 @@ providers:
 		return errors.Wrap(err, "create grafana dashboard config")
 	}
 
-	if err := os.WriteFile(dashboardDefPath, []byte(defaultDashboardDef), 0644); err != nil {
+	tpl, err := template.New("exporter-file").Delims("<<", ">>").Parse(defaultDashboardDef)
+	if err != nil {
+		return errors.Wrap(err, "parsing dashboard definition")
+	}
+
+	// todo: dynamic port for exporter
+	exporterInstance := net.JoinHostPort(r.dockerHostAddr, "9187")
+	dashboardFile, err := os.Create(dashboardDefFile)
+	if err != nil {
+		return errors.Wrap(err, "creating dashboard file")
+	}
+
+	defer dashboardFile.Close()
+	params := struct {
+		DefaultPgExporterInstance string
+	}{
+		DefaultPgExporterInstance: exporterInstance,
+	}
+	if err = tpl.Execute(dashboardFile, params); err != nil {
 		return errors.Wrap(err, "create grafana dashboard definition")
 	}
 	return nil
