@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	pgExporterImageTag = "quay.io/prometheuscommunity/postgres-exporter:v0.11.1"
+	pgExporterImageTag = "quay.io/prometheuscommunity/postgres-exporter:v0.10.1"
 	grafanaImageTag    = "grafana/grafana-oss:9.0.5"
 	prometheusImageTag = "bitnami/prometheus:2.38.0"
 )

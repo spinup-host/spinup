@@ -108,13 +108,6 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		}
 		return
 	}
-
-	jsonBody, err := json.Marshal(cluster)
-	if err != nil {
-		c.logger.Error("marshalling service response struct", zap.Error(err))
-		respond(http.StatusInternalServerError, w, "Internal server error")
-	} else {
-		respond(http.StatusOK, w, jsonBody)
-	}
+	respond(http.StatusOK, w, cluster)
 	return
 }
