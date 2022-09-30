@@ -1,0 +1,212 @@
+definitions:
+  Cluster:
+    description: |-
+      Cluster is used to parse request from JSON payload
+      todo merge with metastore.ClusterInfo
+    properties:
+      architecture:
+        description: one of arm64v8 or arm32v7 or amd64
+        type: string
+        x-go-name: Architecture
+      db:
+        $ref: '#/definitions/dbCluster'
+      userId:
+        type: string
+        x-go-name: UserID
+      version:
+        $ref: '#/definitions/version'
+    type: object
+    x-go-package: github.com/spinup-host/spinup/api
+  ClusterInfo:
+    properties:
+      architecture:
+        description: one of arm64v8 or arm32v7 or amd64
+        type: string
+        x-go-name: Architecture
+      backup:
+        $ref: '#/definitions/backupConfig'
+      backup_enabled:
+        type: boolean
+        x-go-name: BackupEnabled
+      cluster_id:
+        type: string
+        x-go-name: ClusterID
+      cpu:
+        format: int64
+        type: integer
+        x-go-name: CPU
+      host:
+        type: string
+        x-go-name: Host
+      id:
+        format: int64
+        type: integer
+        x-go-name: ID
+      majversion:
+        format: int64
+        type: integer
+        x-go-name: MajVersion
+      memory:
+        format: int64
+        type: integer
+        x-go-name: Memory
+      minversion:
+        format: int64
+        type: integer
+        x-go-name: MinVersion
+      monitoring:
+        type: string
+        x-go-name: Monitoring
+      name:
+        type: string
+        x-go-name: Name
+      password:
+        type: string
+        x-go-name: Password
+      port:
+        format: int64
+        type: integer
+        x-go-name: Port
+      type:
+        type: string
+        x-go-name: Type
+      username:
+        type: string
+        x-go-name: Username
+    type: object
+    x-go-package: github.com/spinup-host/spinup/internal/metastore
+  Destination:
+    properties:
+      ApiKeyID:
+        type: string
+      ApiKeySecret:
+        type: string
+      BucketName:
+        type: string
+      Name:
+        type: string
+    type: object
+    x-go-package: github.com/spinup-host/spinup/internal/metastore
+  backupConfig:
+    properties:
+      Dest:
+        $ref: '#/definitions/Destination'
+      Schedule:
+        additionalProperties:
+          type: object
+        description: https://man7.org/linux/man-pages/man5/crontab.5.html
+        type: object
+    type: object
+    x-go-package: github.com/spinup-host/spinup/internal/metastore
+  createClusterResponse:
+    properties:
+      data:
+        $ref: '#/definitions/ClusterInfo'
+    title: createClusterResponseWrapper wraps a successful response after creating
+      a cluster endpoint.
+    type: object
+    x-go-name: createClusterResponseWrapper
+    x-go-package: github.com/spinup-host/spinup/openapi
+  dbCluster:
+    properties:
+      cpu:
+        format: int64
+        type: integer
+        x-go-name: CPU
+      id:
+        type: string
+        x-go-name: ID
+      memory:
+        format: int64
+        type: integer
+        x-go-name: Memory
+      monitoring:
+        type: string
+        x-go-name: Monitoring
+      name:
+        type: string
+        x-go-name: Name
+      password:
+        type: string
+        x-go-name: Password
+      type:
+        type: string
+        x-go-name: Type
+      username:
+        type: string
+        x-go-name: Username
+    type: object
+    x-go-package: github.com/spinup-host/spinup/api
+  listClusterResponse:
+    properties:
+      data:
+        description: in:body
+        items:
+          $ref: '#/definitions/ClusterInfo'
+        type: array
+        x-go-name: Data
+    title: listClusterResponseWrapper wraps a successful response when listing clusters.
+    type: object
+    x-go-name: listClusterResponseWrapper
+    x-go-package: github.com/spinup-host/spinup/openapi
+  unauthorizedResponse:
+    properties:
+      message:
+        description: in:body
+        type: string
+        x-go-name: Message
+    title: unauthorizedResponseWrapper wraps an unauthorized response.
+    type: object
+    x-go-name: unauthorizedResponseWrapper
+    x-go-package: github.com/spinup-host/spinup/openapi
+  version:
+    properties:
+      maj:
+        format: uint64
+        type: integer
+        x-go-name: Maj
+      min:
+        format: uint64
+        type: integer
+        x-go-name: Min
+    type: object
+    x-go-package: github.com/spinup-host/spinup/api
+info: {}
+paths:
+  /create:
+    post:
+      operationId: createCluster
+      parameters:
+      - description: Parameters for create the new cluster
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/Cluster'
+      responses:
+        "200":
+          description: createClusterResponse
+          schema:
+            $ref: '#/definitions/createClusterResponse'
+        "401":
+          description: unauthorizedResponse
+          schema:
+            $ref: '#/definitions/unauthorizedResponse'
+      summary: Create a new cluster.
+      tags:
+      - cluster
+  /listcluster:
+    get:
+      operationId: listCluster
+      responses:
+        "200":
+          description: listClusterResponse
+          schema:
+            $ref: '#/definitions/listClusterResponse'
+        "401":
+          description: unauthorizedResponse
+          schema:
+            $ref: '#/definitions/unauthorizedResponse'
+      summary: List all created clusters.
+      tags:
+      - cluster
+swagger: "2.0"
