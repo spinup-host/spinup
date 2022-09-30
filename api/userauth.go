@@ -138,12 +138,16 @@ func AltAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	apiKeyHeader := r.Header.Get("x-api-key")
 	_, err := config.ValidateUser("", apiKeyHeader)
+
+	response := map[string]string{}
+	var code int
 	if err != nil {
-		respond(http.StatusUnauthorized, w, map[string]string{
-			"message": err.Error(),
-		})
-		return
+		response["message"] = err.Error()
+		code = http.StatusUnauthorized
+	} else {
+		response["message"] = "valid API key"
+		code = http.StatusOK
 	}
-	w.Write([]byte("Valid Api Key"))
-	w.WriteHeader(http.StatusOK)
+	respond(code, w, response)
+	return
 }

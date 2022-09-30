@@ -65,9 +65,16 @@ func (c *Container) Start(ctx context.Context, d Docker) (container.ContainerCre
 	}
 
 	body, err = d.Cli.ContainerCreate(ctx, &c.Config, &c.HostConfig, &c.NetworkConfig, nil, c.Name)
-	if err != nil {
+	switch {
+	case err == nil:
+	default:
+		break
+	case strings.Contains(err.Error(), "You have to remove (or rename) that container"):
+		return body, ErrDuplicateContainerName
+	case err != nil:
 		return body, errors.Wrapf(err, "unable to create container with image %s", c.Config.Image)
 	}
+
 	err = d.Cli.ContainerStart(ctx, body.ID, c.Options)
 	if err != nil {
 		return body, errors.Wrapf(err, "unable to start container for image %s", c.Config.Image)
@@ -99,7 +106,7 @@ func (c *Container) StartExisting(ctx context.Context, d Docker) error {
 	if err != nil {
 		return errors.Wrapf(err, "getting data for container %s", c.ID)
 	}
-	
+
 	c.Config = *data.Config
 	c.NetworkConfig = network.NetworkingConfig{
 		EndpointsConfig: data.NetworkSettings.Networks,

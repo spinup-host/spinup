@@ -3,13 +3,14 @@ package api
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
 
 	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/misc"
 )
@@ -97,15 +98,13 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 
 	if err := c.svc.CreateService(req.Context(), &cluster); err != nil {
 		c.logger.Error("failed to add create service", zap.Error(err))
+		if errors.Is(err, dockerservice.ErrDuplicateContainerName) {
+			respond(http.StatusBadRequest, w, map[string]string{"message": "container with provided name already exists"})
+		} else {
+			respond(http.StatusBadRequest, w, map[string]string{"message": "failed to add service"})
+		}
+		return
 	}
-
-	jsonBody, err := json.Marshal(cluster)
-	if err != nil {
-		log.Printf("ERROR: marshalling service response struct serviceResponse %v", err)
-		misc.ErrorResponse(w, "Internal server error ", 500)
-	} else {
-		w.Header().Set("Content-type", "application/json")
-		w.Write(jsonBody)
-	}
+	respond(http.StatusOK, w, cluster)
 	return
 }
