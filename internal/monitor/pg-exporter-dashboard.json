@@ -3521,6 +3521,26 @@
         "useTags": false
       },
       {
+        "auto": true,
+        "hide": 0,
+        "label": null,
+        "name": "Server",
+        "datasource": "DS_PROMETHEUS",
+        "definition": "label_values({job=\"postgres-exporter\"}, server)",
+        "multi": false,
+        "options": [],
+        "query": "label_values({job=\"pg_exporter\"}, server)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
         "allValue": null,
         "current": {},
         "datasource": "DS_PROMETHEUS",
