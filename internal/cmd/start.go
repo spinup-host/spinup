@@ -27,7 +27,6 @@ import (
 
 	"github.com/spinup-host/spinup/api"
 	"github.com/spinup-host/spinup/config"
-	"github.com/spinup-host/spinup/internal/backup"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
@@ -80,7 +79,7 @@ func apiHandler() http.Handler {
 	mux.HandleFunc("/listcluster", ch.ListCluster)
 	mux.HandleFunc("/cluster", ch.GetCluster)
 	mux.HandleFunc("/metrics", mh.ServeHTTP)
-	mux.HandleFunc("/createbackup", backup.CreateBackup)
+	mux.HandleFunc("/createbackup", api.CreateBackup)
 	mux.HandleFunc("/altauth", api.AltAuth)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},

@@ -1,4 +1,4 @@
-package backup
+package api
 
 import (
 	"archive/tar"
@@ -44,33 +44,33 @@ type BackupData struct {
 // Ideally I would like to keep the modify-pghba.sh script to scripts directory.
 // However, Go doesn't support relative directory yet https://github.com/golang/go/issues/46056 !!
 
-//go:embed modify-pghba.sh
+//go:embed scripts/modify-pghba.sh
 var f embed.FS
 
 func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != "POST" {
-		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
+		respond(http.StatusMethodNotAllowed, w, map[string]string{"message": "invalid method"})
 		return
 	}
 	var s metastore.ClusterInfo
 	byteArray, err := io.ReadAll(r.Body)
 	if err != nil {
-		utils.Logger.Error("Error Occured", zap.Error(err))
-		misc.ErrorResponse(w, "error reading from request body", 500)
+		utils.Logger.Error("failed to read request body", zap.Error(err))
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "failed to read request body"})
 		return
 	}
 	err = json.Unmarshal(byteArray, &s)
 	if err != nil {
-		utils.Logger.Error("Error Occured", zap.Error(err))
-		misc.ErrorResponse(w, "error reading from readall body", 500)
+		utils.Logger.Error("failed to parse request body", zap.Error(err))
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "failed to parse request body"})
 		return
 	}
 	if err = backupDataValidation(&s); err != nil {
 		l := &logicError{}
 		if errors.As(err, l) {
-			misc.ErrorResponse(w, l.Error(), http.StatusBadRequest)
+			respond(http.StatusBadRequest, w, map[string]string{"message": l.Error()})
 		} else {
-			misc.ErrorResponse(w, err.Error(), http.StatusInternalServerError)
+			respond(http.StatusInternalServerError, w, map[string]string{"message": err.Error()})
 		}
 		return
 	}
@@ -78,9 +78,10 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
-		misc.ErrorResponse(w, "error accessing database", 500)
+		respond(http.StatusInternalServerError, w, map[string]string{"message": err.Error()})
 		return
 	}
+
 	minute, _ := s.Backup.Schedule["minute"].(string)
 	min, _ := strconv.Atoi(minute)
 
@@ -110,20 +111,20 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		mon,
 		dowInt,
 	); err != nil {
-		utils.Logger.Error("Error executing insert into backup table", zap.Error(err))
-		misc.ErrorResponse(w, "internal server error", 500)
+		utils.Logger.Error("error saving backup info", zap.Error(err))
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "error saving backup schedule"})
 		return
 	}
 	pgHost := postgres.PREFIXPGCONTAINER + s.Name
 	dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
 	if err != nil {
-		utils.Logger.Error("Error creating client", zap.Error(err))
+		utils.Logger.Error("Error creating docker client", zap.Error(err))
 
 	}
 	pgContainer, err := dockerClient.GetContainer(context.Background(), pgHost)
 	if err != nil {
-		utils.Logger.Error("Error getting container for container name ", zap.String("containerName", pgHost), zap.Error(err))
-		misc.ErrorResponse(w, "internal server error", 500)
+		utils.Logger.Error("failed to get container", zap.String("container_name", pgHost), zap.Error(err))
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "internal server error"})
 		return
 	}
 	scriptContent, err := f.ReadFile("modify-pghba.sh")
@@ -132,23 +133,20 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	err = updatePghba(pgContainer, dockerClient, scriptContent)
 	if err != nil {
-		utils.Logger.Error("updating pghba", zap.Error(err))
-		misc.ErrorResponse(w, "internal server error", 500)
+		utils.Logger.Error("failed to update pghba", zap.Error(err))
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "internal server error"})
 		return
 	}
-	cis, err := metastore.AllClusters(db)
+
+	ci, err := metastore.GetClusterByName(db, s.Name)
 	if err != nil {
-		misc.ErrorResponse(w, "internal server error", 500)
-		return
-	}
-	ci, err := cis.FilterByName(s.Name)
-	if err != nil {
-		misc.ErrorResponse(w, "internal server error", 500)
+		utils.Logger.Error("failed to get cluster", zap.Error(err))
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "internal server error"})
 		return
 	}
 	execPath := "/usr/lib/postgresql/" + strconv.Itoa(ci.MajVersion) + "/bin/"
 	if err = postgres.ReloadPostgres(dockerClient, execPath, postgres.PGDATADIR, pgHost); err != nil {
-		misc.ErrorResponse(w, "internal server error", 500)
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "internal server error"})
 		return
 	}
 	c := cron.New()
@@ -192,7 +190,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 	_, err = c.AddFunc(spec, TriggerBackup(config.DefaultNetworkName, backupData))
 	if err != nil {
 		utils.Logger.Error("scheduling database backup", zap.Error(err))
-		misc.ErrorResponse(w, "internal server error", 500)
+		respond(http.StatusInternalServerError, w, map[string]string{"message": "internal server error"})
 		return
 	}
 	c.Start()

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"os/exec"
 	"strings"
 	"time"
@@ -74,11 +73,6 @@ func SliceContainsString(s []string, str string) bool {
 		}
 	}
 	return false
-}
-
-func ErrorResponse(w http.ResponseWriter, msg string, statuscode int) {
-	w.WriteHeader(statuscode)
-	w.Write([]byte(msg))
 }
 
 func StringToDockerEnvVal(key, val string) string {
