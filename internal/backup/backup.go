@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -54,7 +53,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var s metastore.ClusterInfo
-	byteArray, err := ioutil.ReadAll(r.Body)
+	byteArray, err := io.ReadAll(r.Body)
 	if err != nil {
 		utils.Logger.Error("Error Occured", zap.Error(err))
 		misc.ErrorResponse(w, "error reading from request body", 500)

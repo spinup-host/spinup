@@ -3,7 +3,7 @@ package dockerservice
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -173,7 +173,7 @@ func pullImageFromDockerRegistry(d Docker, image string) error {
 		return fmt.Errorf("unable to pull docker image %s %w", image, err)
 	}
 	defer rc.Close()
-	_, err = ioutil.ReadAll(rc)
+	_, err = io.ReadAll(rc)
 	if err != nil {
 		return fmt.Errorf("unable to download docker image %s %w", image, err)
 	}

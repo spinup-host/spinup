@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
@@ -218,7 +217,7 @@ func validateConfig(path string) error {
 		return err
 	}
 
-	signBytes, err := ioutil.ReadFile(config.Cfg.Common.ProjectDir + "/app.rsa")
+	signBytes, err := os.ReadFile(config.Cfg.Common.ProjectDir + "/app.rsa")
 	if err != nil {
 		return err
 	}
@@ -227,7 +226,7 @@ func validateConfig(path string) error {
 		return err
 	}
 
-	verifyBytes, err := ioutil.ReadFile(config.Cfg.Common.ProjectDir + "/app.rsa.pub")
+	verifyBytes, err := os.ReadFile(config.Cfg.Common.ProjectDir + "/app.rsa.pub")
 	if err != nil {
 		return err
 	}
