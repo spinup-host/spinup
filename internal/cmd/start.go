@@ -44,6 +44,7 @@ var (
 	uiPort  = ":3000"
 
 	monitorRuntime *monitor.Runtime
+	appConfig      config.Configuration
 )
 
 func apiHandler() http.Handler {
@@ -51,36 +52,36 @@ func apiHandler() http.Handler {
 	if err != nil {
 		utils.Logger.Error("could not create docker client", zap.Error(err))
 	}
-	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
-	db, err := metastore.NewDb(path)
+	projectDir := filepath.Join(appConfig.Common.ProjectDir, "metastore.db")
+	db, err := metastore.NewDb(projectDir)
 	if err != nil {
 		utils.Logger.Fatal("unable to setup sqlite database", zap.Error(err))
 	}
 
-	clusterService := service.NewService(dockerClient, db, monitorRuntime, utils.Logger, config.Cfg)
+	clusterService := service.NewService(dockerClient, db, monitorRuntime, utils.Logger, appConfig)
 
-	ch, err := api.NewClusterHandler(clusterService, utils.Logger)
+	ch, err := api.NewClusterHandler(clusterService, appConfig, utils.Logger)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
-	mh, err := metrics.NewMetricsHandler()
+	mh, err := metrics.NewMetricsHandler(appConfig)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
+	bh := api.NewBackupHandler(appConfig, utils.Logger)
+	githubHandler := api.NewGithubAuthHandler(appConfig.SignKey, appConfig.Common.ClientID, appConfig.Common.ClientSecret)
+
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", api.Hello)
 	mux.HandleFunc("/createservice", ch.CreateService)
-	mux.HandleFunc("/githubAuth", api.GithubAuth)
+	mux.HandleFunc("/githubAuth", githubHandler.GithubAuth)
 	mux.HandleFunc("/logs", api.Logs)
-	mux.HandleFunc("/jwt", api.JWT)
-	mux.HandleFunc("/jwtdecode", api.JWTDecode)
 	mux.HandleFunc("/streamlogs", api.StreamLogs)
 	mux.HandleFunc("/listcluster", ch.ListCluster)
 	mux.HandleFunc("/cluster", ch.GetCluster)
 	mux.HandleFunc("/metrics", mh.ServeHTTP)
-	mux.HandleFunc("/createbackup", api.CreateBackup)
-	mux.HandleFunc("/altauth", api.AltAuth)
+	mux.HandleFunc("/createbackup", bh.CreateBackup)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},
 		AllowedHeaders: []string{"authorization", "content-type", "x-api-key"},
@@ -103,7 +104,7 @@ func startCmd() *cobra.Command {
 				log.Fatalf("FATAL: failed to validate config: %v", err)
 			}
 			log.Println("INFO: Initial Validations successful")
-			utils.InitializeLogger(config.Cfg.Common.LogDir, config.Cfg.Common.LogFile)
+			utils.InitializeLogger(appConfig.Common.LogDir, appConfig.Common.LogFile)
 
 			dockerClient, err := dockerservice.NewDocker(config.DefaultNetworkName)
 			if err != nil {
@@ -119,8 +120,8 @@ func startCmd() *cobra.Command {
 				}
 			}
 
-			if config.Cfg.Common.Monitoring {
-				monitorRuntime = monitor.NewRuntime(dockerClient, monitor.WithLogger(utils.Logger), monitor.WithAppConfig(config.Cfg))
+			if appConfig.Common.Monitoring {
+				monitorRuntime = monitor.NewRuntime(dockerClient, monitor.WithLogger(utils.Logger), monitor.WithAppConfig(appConfig))
 				if err := monitorRuntime.BootstrapServices(ctx); err != nil {
 					utils.Logger.Error("could not start monitoring services", zap.Error(err))
 				} else {
@@ -212,25 +213,29 @@ func validateConfig(path string) error {
 	defer file.Close()
 
 	d := yaml.NewDecoder(file)
-	if err = d.Decode(&config.Cfg); err != nil {
+	if err = d.Decode(&appConfig); err != nil {
 		return err
 	}
 
-	signBytes, err := os.ReadFile(config.Cfg.Common.ProjectDir + "/app.rsa")
+	if appConfig.PromConfig.Port == 0 {
+		appConfig.PromConfig.Port = 9090
+	}
+
+	signBytes, err := os.ReadFile(appConfig.Common.ProjectDir + "/app.rsa")
 	if err != nil {
 		return err
 	}
 
-	if config.Cfg.SignKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes); err != nil {
+	if appConfig.SignKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes); err != nil {
 		return err
 	}
 
-	verifyBytes, err := os.ReadFile(config.Cfg.Common.ProjectDir + "/app.rsa.pub")
+	verifyBytes, err := os.ReadFile(appConfig.Common.ProjectDir + "/app.rsa.pub")
 	if err != nil {
 		return err
 	}
 
-	if config.Cfg.VerifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes); err != nil {
+	if appConfig.VerifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes); err != nil {
 		return err
 	}
 

@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"text/template"
 
 	"github.com/docker/docker/api/types"
@@ -225,7 +226,6 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 		},
 	}
 
-	metricsPort := nat.Port("9090/tcp")
 	promContainer := dockerservice.NewContainer(
 		r.prometheusName,
 		container.Config{
@@ -234,9 +234,9 @@ func (r *Runtime) newPrometheusContainer(promCfgPath string) (*dockerservice.Con
 		},
 		container.HostConfig{
 			PortBindings: nat.PortMap{
-				metricsPort: []nat.PortBinding{{
+				"9090/tcp": []nat.PortBinding{{
 					HostIP:   "0.0.0.0",
-					HostPort: "9090",
+					HostPort: strconv.Itoa(r.appConfig.PromConfig.Port),
 				}},
 			},
 			Mounts: mounts,
@@ -309,7 +309,7 @@ func (r *Runtime) writePromConfig(cfgPath string) error {
     static_configs:
     - targets:
       - "%s"
-`, net.JoinHostPort(r.dockerHostAddr, "9090"), net.JoinHostPort(r.dockerHostAddr, "9187"))
+`, net.JoinHostPort(r.dockerHostAddr, strconv.Itoa(r.appConfig.PromConfig.Port)), net.JoinHostPort(r.dockerHostAddr, "9187"))
 	if err := os.WriteFile(cfgPath, []byte(cfg), 0644); err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ datasources:
   isDefault: true
   version: 1
   editable: true
-`, net.JoinHostPort(r.dockerHostAddr, "9090"))
+`, net.JoinHostPort(r.dockerHostAddr, strconv.Itoa(r.appConfig.PromConfig.Port)))
 
 	defaultDashboardCfg = fmt.Sprintf(`# config file for provisioning postgres dashboard in grafana
 apiVersion: 1

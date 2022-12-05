@@ -47,7 +47,19 @@ type BackupData struct {
 //go:embed scripts/modify-pghba.sh
 var f embed.FS
 
-func CreateBackup(w http.ResponseWriter, r *http.Request) {
+type BackupHandler struct {
+	logger    *zap.Logger
+	appConfig config.Configuration
+}
+
+func NewBackupHandler(cfg config.Configuration, logger *zap.Logger) BackupHandler {
+	return BackupHandler{
+		logger:    logger,
+		appConfig: cfg,
+	}
+}
+
+func (b BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != "POST" {
 		respond(http.StatusMethodNotAllowed, w, map[string]string{"message": "invalid method"})
 		return
@@ -75,7 +87,7 @@ func CreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
+	path := filepath.Join(b.appConfig.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
 		respond(http.StatusInternalServerError, w, map[string]string{"message": err.Error()})

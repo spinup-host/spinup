@@ -2,11 +2,10 @@ package api
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/spinup-host/spinup/config"
 )
 
 type user struct {
@@ -23,7 +22,21 @@ type githubAccess struct {
 	Scope       string `json:"scope"`
 }
 
-func GithubAuth(w http.ResponseWriter, r *http.Request) {
+type GithubAuthHandler struct {
+	clientID     string
+	clientSecret string
+	privateKey   *rsa.PrivateKey
+}
+
+func NewGithubAuthHandler(key *rsa.PrivateKey, clientID, clientSecret string) GithubAuthHandler {
+	return GithubAuthHandler{
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		privateKey:   key,
+	}
+}
+
+func (g GithubAuthHandler) GithubAuth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		respond(http.StatusMethodNotAllowed, w, map[string]string{
 			"message": "Invalid Method",
@@ -32,11 +45,6 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	type userAuth struct {
 		Code string `json:"code"`
-	}
-	type githubAuth struct {
-		Code         string `json:"code"`
-		ClientID     string `json:"client_id"`
-		ClientSecret string `json:"client_secret"`
 	}
 	log.Println("req::", r.Body)
 	var ua userAuth
@@ -49,12 +57,9 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("ua", ua)
-	clientID := config.Cfg.Common.ClientID
-
-	clientSecret := config.Cfg.Common.ClientSecret
 
 	log.Println("req::", r.Body)
-	requestBodyMap := map[string]string{"client_id": clientID, "client_secret": clientSecret, "code": ua.Code}
+	requestBodyMap := map[string]string{"client_id": g.clientID, "client_secret": g.clientSecret, "code": ua.Code}
 	requestBodyJSON, err := json.Marshal(requestBodyMap)
 	if err != nil {
 		log.Printf("ERROR: marshalling github auth %v", requestBodyMap)
@@ -110,7 +115,7 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	JWTToken, err := stringToJWT(u.Username)
+	JWTToken, err := stringToJWT(g.privateKey, u.Username)
 	if err != nil {
 		respond(http.StatusInternalServerError, w, map[string]string{
 			"message": err.Error(),
@@ -127,27 +132,4 @@ func GithubAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(userJSON)
-}
-
-func AltAuth(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		respond(http.StatusMethodNotAllowed, w, map[string]string{
-			"message": "Invalid Method",
-		})
-		return
-	}
-	apiKeyHeader := r.Header.Get("x-api-key")
-	_, err := config.ValidateUser("", apiKeyHeader)
-
-	response := map[string]string{}
-	var code int
-	if err != nil {
-		response["message"] = err.Error()
-		code = http.StatusUnauthorized
-	} else {
-		response["message"] = "valid API key"
-		code = http.StatusOK
-	}
-	respond(code, w, response)
-	return
 }

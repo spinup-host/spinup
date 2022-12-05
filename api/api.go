@@ -6,17 +6,21 @@ import (
 	"net/http"
 
 	"go.uber.org/zap"
+
+	"github.com/spinup-host/spinup/config"
 )
 
 type ClusterHandler struct {
-	svc    clusterService
-	logger *zap.Logger
+	svc       clusterService
+	logger    *zap.Logger
+	appConfig config.Configuration
 }
 
-func NewClusterHandler(clusterService clusterService, logger *zap.Logger) (ClusterHandler, error) {
+func NewClusterHandler(clusterService clusterService, cfg config.Configuration, logger *zap.Logger) (ClusterHandler, error) {
 	return ClusterHandler{
-		svc:    clusterService,
-		logger: logger,
+		svc:       clusterService,
+		logger:    logger,
+		appConfig: cfg,
 	}, nil
 }
 
