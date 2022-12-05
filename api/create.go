@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
 
-	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/misc"
@@ -46,15 +45,7 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		respond(http.StatusMethodNotAllowed, w, map[string]string{"message": "Invalid Method"})
 		return
 	}
-	authHeader := req.Header.Get("Authorization")
-	apiKeyHeader := req.Header.Get("x-api-key")
 
-	_, err := config.ValidateUser(authHeader, apiKeyHeader)
-	if err != nil {
-		c.logger.Error(err.Error())
-		respond(http.StatusUnauthorized, w, map[string]string{"message": "error validating user"})
-		return
-	}
 	var s Cluster
 
 	byteArray, err := io.ReadAll(req.Body)
@@ -75,13 +66,13 @@ func (c ClusterHandler) CreateService(w http.ResponseWriter, req *http.Request) 
 		respond(http.StatusBadRequest, w, map[string]string{"message": "provided database type is not supported"})
 		return
 	}
-	port, err := misc.Portcheck()
+	port, err := misc.PortCheck(c.appConfig.Common.Ports[0], c.appConfig.Common.Ports[len(c.appConfig.Common.Ports)-1])
 	if err != nil {
 		c.logger.Error("port issue", zap.Error(err))
 		respond(http.StatusInternalServerError, w, map[string]string{"message": "port issue"})
 		return
 	}
-	s.Architecture = config.Cfg.Common.Architecture
+	s.Architecture = c.appConfig.Common.Architecture
 
 	cluster := metastore.ClusterInfo{
 		Architecture: s.Architecture,

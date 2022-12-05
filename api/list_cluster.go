@@ -9,8 +9,6 @@ import (
 
 	"go.uber.org/zap"
 	_ "modernc.org/sqlite"
-
-	"github.com/spinup-host/spinup/config"
 )
 
 func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
@@ -22,7 +20,7 @@ func (c ClusterHandler) ListCluster(w http.ResponseWriter, req *http.Request) {
 	authHeader := req.Header.Get("Authorization")
 	apiKeyHeader := req.Header.Get("x-api-key")
 	var err error
-	_, err = config.ValidateUser(authHeader, apiKeyHeader)
+	_, err = ValidateUser(c.appConfig, authHeader, apiKeyHeader)
 	if err != nil {
 		c.logger.Error("validating user", zap.Error(err))
 		respond(http.StatusUnauthorized, w, map[string]string{
@@ -60,7 +58,7 @@ func (c ClusterHandler) GetCluster(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	apiKeyHeader := r.Header.Get("x-api-key")
 	var err error
-	_, err = config.ValidateUser(authHeader, apiKeyHeader)
+	_, err = ValidateUser(c.appConfig, authHeader, apiKeyHeader)
 	if err != nil {
 		c.logger.Error("validating user", zap.Error(err))
 		respond(http.StatusInternalServerError, w, map[string]interface{}{
