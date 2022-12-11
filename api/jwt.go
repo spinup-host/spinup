@@ -1,23 +1,25 @@
 package api
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"log"
-	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/pkg/errors"
 
 	"github.com/spinup-host/spinup/config"
 )
 
-func stringToJWT(text string) (string, error) {
+func stringToJWT(key *rsa.PrivateKey, text string) (string, error) {
 	// Declare the expiration time of the token
 	// here, we have kept it as 2 days
-	log.Println("string to JWTify:", text)
+	log.Println("string to JWT:", text)
 	expirationTime := time.Now().Add(48 * time.Hour)
 	// Create the JWT claims, which includes the text and expiry time
-	claims := &config.Claims{
+	claims := &Claims{
 		Text: text,
 		StandardClaims: jwt.StandardClaims{
 			// In JWT, the expiry time is expressed as unix milliseconds
@@ -27,38 +29,83 @@ func stringToJWT(text string) (string, error) {
 	// Declare the token with the algorithm used for signing, and the claims
 	token := jwt.NewWithClaims(jwt.SigningMethodPS512, claims)
 	// Create the JWT string
-	jwt, err := token.SignedString(config.Cfg.SignKey)
+	signedToken, err := token.SignedString(key)
 	if err != nil {
 		return "", err
 	}
-	return jwt, nil
+	return signedToken, nil
 }
 
-// TODO: vicky to remove this handler after the testing.
-func JWT(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	data := query.Get("data")
-	if data == "" {
-		fmt.Println("data is empty")
+func ValidateToken(appConfig config.Configuration, authHeader string) (string, error) {
+	splitToken := strings.Split(authHeader, "Bearer ")
+	if len(splitToken) < 2 {
+		return "", fmt.Errorf("cannot validate empty token")
 	}
-	jwtToken, err := stringToJWT(data)
+	reqToken := splitToken[1]
+	userID, err := JWTToString(appConfig.VerifyKey, reqToken)
 	if err != nil {
-		respond(http.StatusInternalServerError, w, map[string]string{
-			"message": err.Error(),
-		})
-		return
+		return "", err
 	}
-	w.Write([]byte(jwtToken))
+
+	if userID == "" {
+		return "", errors.New("user ID cannot be blank")
+	}
+	return userID, nil
 }
 
-func JWTDecode(w http.ResponseWriter, r *http.Request) {
-	jwttoken := r.Header.Get("jwttoken")
-	text, err := config.JWTToString(jwttoken)
-	if err != nil {
-		log.Printf("error jwtdecode %v", err)
-		respond(http.StatusInternalServerError, w, map[string]string{
-			"message": err.Error()})
-		return
+// Claims is a struct that will be encoded to a JWT.
+// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
+type Claims struct {
+	Text string `json:"text"`
+	jwt.StandardClaims
+}
+
+func ValidateUser(appConfig config.Configuration, authHeader string, apiKeyHeader string) (string, error) {
+	if authHeader == "" && apiKeyHeader == "" {
+		return "", errors.New("no authorization keys found")
 	}
-	w.Write([]byte(text))
+
+	if apiKeyHeader != "" {
+		if err := ValidateApiKey(appConfig, apiKeyHeader); err != nil {
+			log.Printf("error validating api-key %v", apiKeyHeader)
+			return "", errors.New("error validating api-key")
+		} else {
+			return "testuser", nil
+		}
+	}
+
+	if authHeader != "" {
+		if userId, err := ValidateToken(appConfig, authHeader); err != nil {
+			log.Printf("error validating token %v", authHeader)
+			return "", errors.New("error validating token")
+		} else {
+			return userId, nil
+		}
+	}
+
+	return "testuser", errors.New("could not validate authentication headers")
+}
+
+func ValidateApiKey(appConfig config.Configuration, apiKeyHeader string) error {
+	if apiKeyHeader != appConfig.Common.ApiKey {
+		return errors.New("invalid api key")
+	}
+	return nil
+}
+
+func JWTToString(publicKey *rsa.PublicKey, tokenString string) (string, error) {
+	keyFunc := func(t *jwt.Token) (interface{}, error) {
+		return publicKey, nil
+	}
+	claims := &Claims{}
+	log.Println("JWT to string:", tokenString)
+	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
+	if err != nil {
+		return "", err
+	}
+	if !token.Valid {
+		return "", errors.New("invalid token")
+	}
+	log.Println("claims:", claims.Text)
+	return claims.Text, nil
 }

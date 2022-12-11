@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -16,32 +15,25 @@ import (
 )
 
 type MetricsHandler struct {
-	Db metastore.Db
+	Db        metastore.Db
+	appConfig config.Configuration
 }
 
-func NewMetricsHandler() (MetricsHandler, error) {
-	path := filepath.Join(config.Cfg.Common.ProjectDir, "metastore.db")
+func NewMetricsHandler(cfg config.Configuration) (MetricsHandler, error) {
+	path := filepath.Join(cfg.Common.ProjectDir, "metastore.db")
 	db, err := metastore.NewDb(path)
 	if err != nil {
 		return MetricsHandler{}, err
 	}
 	return MetricsHandler{
-		Db: db,
+		Db:        db,
+		appConfig: cfg,
 	}, nil
 }
 
 func (m *MetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != "GET" {
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
-		return
-	}
-	authHeader := r.Header.Get("Authorization")
-	apiKeyHeader := r.Header.Get("x-api-key")
-	var err error
-	_, err = config.ValidateUser(authHeader, apiKeyHeader)
-	if err != nil {
-		log.Printf(err.Error())
-		http.Error(w, "error validating user", http.StatusUnauthorized)
 		return
 	}
 	errCh := make(chan error, 1)

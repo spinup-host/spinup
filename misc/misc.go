@@ -9,8 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/spinup-host/spinup/config"
 )
 
 func minMax(array []int) (int, int) {
@@ -27,9 +25,8 @@ func minMax(array []int) (int, int) {
 	return min, max
 }
 
-func Portcheck() (int, error) {
-	min, endingPort := minMax(config.Cfg.Common.Ports)
-	for port := min; port <= endingPort; port++ {
+func PortCheck(min, max int) (int, error) {
+	for port := min; port <= max; port++ {
 		target := fmt.Sprintf("%s:%d", "localhost", port)
 		conn, err := net.DialTimeout("tcp", target, 3*time.Second)
 		if err == nil {
