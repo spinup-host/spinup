@@ -33,10 +33,10 @@ type ClusterInfo struct {
 	Memory     int64  `json:"memory,omitempty"`
 
 	BackupEnabled bool         `json:"backup_enabled,omitempty"`
-	Backup        backupConfig `json:"backup,omitempty"`
+	Backup        BackupConfig `json:"backup,omitempty"`
 }
 
-type backupConfig struct {
+type BackupConfig struct {
 	// https://man7.org/linux/man-pages/man5/crontab.5.html
 	Schedule map[string]interface{}
 	Dest     Destination `json:"Dest"`
