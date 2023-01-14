@@ -28,5 +28,5 @@ require (
 	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	google.golang.org/genproto v0.0.0-20220921223823-23cae91e6737 // indirect
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.19.3
+	modernc.org/sqlite v1.20.2
 )
