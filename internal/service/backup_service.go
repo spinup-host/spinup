@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"embed"
+	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -21,6 +22,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 // Ideally I would like to keep the modify-pghba.sh script to scripts directory.
@@ -31,7 +33,7 @@ var f embed.FS
 
 const (
 	tarPath               = "modify-pghba.tar"
-	PREFIXBACKUPCONTAINER = "spinup-postgres-backup-"
+	PREFIXBACKUPCONTAINER = "spinup-pg-backup-"
 )
 
 type BackupService struct {
@@ -125,7 +127,7 @@ func (bs BackupService) CreateBackup(ctx context.Context, clusterID string, back
 	backupData := BackupData{
 		AwsAccessKeySecret: backupConfig.Dest.ApiKeySecret,
 		AwsAccessKeyId:     backupConfig.Dest.ApiKeyID,
-		WalgS3Prefix:       backupConfig.Dest.BucketName,
+		WalgS3Prefix:       fmt.Sprintf("s3://%s", backupConfig.Dest.BucketName),
 		PgHost:             pgHost,
 		PgDatabase:         "postgres",
 		PgUsername:         cluster.Username,
@@ -253,8 +255,12 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 	// setting key and value for the map. networkName=$dbname_default (eg: viggy_default)
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
+
+	layout := "20060102-03-04-05"
+	containerName := fmt.Sprintf("%s%s-%s", PREFIXBACKUPCONTAINER, backupData.PgHost, time.Now().Format(layout))
+
 	backupContainer := dockerservice.NewContainer(
-		PREFIXBACKUPCONTAINER+backupData.PgHost,
+		containerName,
 		container.Config{
 			Image:        "spinuphost/walg:latest",
 			Env:          env,
@@ -267,9 +273,10 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 		utils.Logger.Info("starting backup")
 		op, err = backupContainer.Start(context.Background(), dockerClient)
 		if err != nil {
-			utils.Logger.Error("starting backup container", zap.Error(err))
+			utils.Logger.Error("failed to start backup container", zap.Error(err))
+		} else {
+			utils.Logger.Info("started backup container:", zap.String("containerId", op.ID))
 		}
-		utils.Logger.Info("created backup container:", zap.String("containerId", op.ID))
 		utils.Logger.Info("Ending backup")
 	}
 }
