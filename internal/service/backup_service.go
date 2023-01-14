@@ -26,7 +26,7 @@ import (
 // Ideally I would like to keep the modify-pghba.sh script to scripts directory.
 // However, Go doesn't support relative directory yet https://github.com/golang/go/issues/46056 !!
 
-//go:embed scripts/modify-pghba.sh
+//go:embed modify-pghba.sh
 var f embed.FS
 
 const (

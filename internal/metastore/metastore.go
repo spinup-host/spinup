@@ -179,6 +179,9 @@ func GetClusterByID(db Db, clusterId string) (ClusterInfo, error) {
 		&ci.MinVersion,
 	)
 	ci.Host = "localhost" // filled since we don't save the host yet.
+	if errors.Is(err, sql.ErrNoRows) {
+		return ci, errors.New(fmt.Sprintf("no cluster with ID: '%s' was found", clusterId))
+	}
 	return ci, err
 }
 
