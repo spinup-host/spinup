@@ -22,7 +22,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"time"
 )
 
 // Ideally I would like to keep the modify-pghba.sh script to scripts directory.
@@ -256,27 +255,40 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 
-	layout := "20060102-03-04-05"
-	containerName := fmt.Sprintf("%s%s-%s", PREFIXBACKUPCONTAINER, backupData.PgHost, time.Now().Format(layout))
-
-	backupContainer := dockerservice.NewContainer(
-		containerName,
-		container.Config{
-			Image:        "spinuphost/walg:latest",
-			Env:          env,
-			ExposedPorts: map[nat.Port]struct{}{"5432": {}},
-		},
-		container.HostConfig{NetworkMode: "default"},
-		nwConfig,
-	)
 	return func() {
 		utils.Logger.Info("starting backup")
-		op, err = backupContainer.Start(context.Background(), dockerClient)
-		if err != nil {
-			utils.Logger.Error("failed to start backup container", zap.Error(err))
+
+		containerName := PREFIXBACKUPCONTAINER + backupData.PgHost
+		backupContainer, err := dockerClient.GetContainer(context.TODO(), containerName)
+		if backupContainer != nil {
+			err = backupContainer.StartExisting(context.TODO(), dockerClient)
+			if err != nil {
+				utils.Logger.Error( "failed to start existing walg container", zap.Error(err))
+			} else {
+				utils.Logger.Info( fmt.Sprintf("reusing existing walg container: '%s'", containerName))
+			}
 		} else {
-			utils.Logger.Info("started backup container:", zap.String("containerId", op.ID))
+			if err != nil {
+				utils.Logger.Warn("could not get info for backup container, spinup will attempt to recreate it", zap.Error(err))
+			}
+			walgContainer := dockerservice.NewContainer(
+				containerName,
+				container.Config{
+					Image:        "spinuphost/walg:latest",
+					Env:          env,
+					ExposedPorts: map[nat.Port]struct{}{"5432": {}},
+				},
+				container.HostConfig{NetworkMode: "default"},
+				nwConfig,
+			)
+			op, err = walgContainer.Start(context.Background(), dockerClient)
+			if err != nil {
+				utils.Logger.Error("failed to start backup container", zap.Error(err))
+			} else {
+				utils.Logger.Info("started backup container:", zap.String("containerId", op.ID))
+			}
 		}
+
 		utils.Logger.Info("Ending backup")
 	}
 }
