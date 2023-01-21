@@ -59,11 +59,11 @@ func apiHandler() http.Handler {
 	}
 
 	clusterService := service.NewService(dockerClient, db, monitorRuntime, utils.Logger, appConfig)
+
 	ch, err := api.NewClusterHandler(clusterService, appConfig, utils.Logger)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
-
 	mh, err := metrics.NewMetricsHandler(appConfig)
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
