@@ -33,10 +33,10 @@ type ClusterInfo struct {
 	Memory     int64  `json:"memory,omitempty"`
 
 	BackupEnabled bool         `json:"backup_enabled,omitempty"`
-	Backup        backupConfig `json:"backup,omitempty"`
+	Backup        BackupConfig `json:"backup,omitempty"`
 }
 
-type backupConfig struct {
+type BackupConfig struct {
 	// https://man7.org/linux/man-pages/man5/crontab.5.html
 	Schedule map[string]interface{}
 	Dest     Destination `json:"Dest"`
@@ -169,6 +169,27 @@ func GetClusterByID(db Db, clusterId string) (ClusterInfo, error) {
 	var ci ClusterInfo
 	query := `SELECT id, clusterId, name, username, password, port, majVersion, minVersion FROM clusterInfo WHERE clusterId = ? LIMIT 1`
 	err := db.Client.QueryRow(query, clusterId).Scan(
+		&ci.ID,
+		&ci.ClusterID,
+		&ci.Name,
+		&ci.Username,
+		&ci.Password,
+		&ci.Port,
+		&ci.MajVersion,
+		&ci.MinVersion,
+	)
+	ci.Host = "localhost" // filled since we don't save the host yet.
+	if errors.Is(err, sql.ErrNoRows) {
+		return ci, errors.New(fmt.Sprintf("no cluster with ID: '%s' was found", clusterId))
+	}
+	return ci, err
+}
+
+// GetClusterByName returns info about the cluster whose name is provided.
+func GetClusterByName(db Db, clusterName string) (ClusterInfo, error) {
+	var ci ClusterInfo
+	query := `SELECT id, clusterId, name, username, password, port, majVersion, minVersion FROM clusterInfo WHERE name = ? LIMIT 1`
+	err := db.Client.QueryRow(query, clusterName).Scan(
 		&ci.ID,
 		&ci.ClusterID,
 		&ci.Name,

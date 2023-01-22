@@ -27,7 +27,6 @@ import (
 
 	"github.com/spinup-host/spinup/api"
 	"github.com/spinup-host/spinup/config"
-	"github.com/spinup-host/spinup/internal/backup"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/monitor"
@@ -69,7 +68,9 @@ func apiHandler() http.Handler {
 	if err != nil {
 		utils.Logger.Fatal("unable to create NewClusterHandler")
 	}
-	bh := backup.NewBackupHandler(appConfig, utils.Logger)
+
+	backupService := service.NewBackupService(db, dockerClient, utils.Logger)
+	bh := api.NewBackupHandler(appConfig, backupService, utils.Logger)
 	githubHandler := api.NewGithubAuthHandler(appConfig.SignKey, appConfig.Common.ClientID, appConfig.Common.ClientSecret)
 
 	rand.Seed(time.Now().UnixNano())

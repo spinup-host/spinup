@@ -3,7 +3,7 @@ package dockerservice
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -37,8 +37,8 @@ type Container struct {
 	Warning       []string
 }
 
-// NewContainer returns a container with provided name, ctx.
-// Rest of the fields default value does makes sense. We should look to remove those since they aren't adding any value
+// NewContainer returns a container with provided name.
+// todo: rest of the fields default value does make sense. We should look to remove those since they aren't adding any value
 func NewContainer(name string, config container.Config, hostConfig container.HostConfig, networkConfig network.NetworkingConfig) Container {
 	return Container{
 		Name:          name,
@@ -173,7 +173,7 @@ func pullImageFromDockerRegistry(d Docker, image string) error {
 		return fmt.Errorf("unable to pull docker image %s %w", image, err)
 	}
 	defer rc.Close()
-	_, err = ioutil.ReadAll(rc)
+	_, err = io.ReadAll(rc)
 	if err != nil {
 		return fmt.Errorf("unable to download docker image %s %w", image, err)
 	}
