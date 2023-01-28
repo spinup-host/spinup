@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/spinup-host/spinup/config"
 	"net/http"
 	"testing"
 
@@ -17,20 +18,22 @@ func TestListCluster(t *testing.T) {
 
 	testClusters := []metastore.ClusterInfo{
 		{
-			ID: 1,
-			Name: "test_cluster_1",
+			ID:        1,
+			Name:      "test_cluster_1",
 			ClusterID: "test_cluster_1",
 		},
 	}
 
 	svc.On("ListClusters", mock.Anything, ).Return(testClusters, nil)
 
-	cfg := zap.NewProductionConfig()
-	cfg.OutputPaths = []string{"stdout"}
-	logger, err := cfg.Build()
+	loggerCfg := zap.NewProductionConfig()
+	loggerCfg.OutputPaths = []string{"stdout"}
+	logger, err := loggerCfg.Build()
 	assert.NoError(t, err)
 
-	ch, err := NewClusterHandler(svc, logger)
+	appCfg := config.Configuration{}
+
+	ch, err := NewClusterHandler(svc, appCfg, logger)
 	server := createServer(ch)
 
 	t.Run("fails for unauthenticated users", func(t *testing.T) {
