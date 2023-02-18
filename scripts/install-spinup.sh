@@ -51,7 +51,6 @@ REACT_APP_CLIENT_ID=${CLIENT_ID}
 REACT_APP_REDIRECT_URI=http://localhost:3000/login
 REACT_APP_SERVER_URI=http://localhost:4434
 REACT_APP_GITHUB_SERVER=http://localhost:4434/githubAuth
-REACT_APP_LIST_URI=http://localhost:4434/listcluster
 REACT_APP_URL=https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=http://localhost:3000/login
 EOF
 cat .env

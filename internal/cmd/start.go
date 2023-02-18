@@ -86,7 +86,6 @@ func apiHandler() http.Handler {
 	mux.HandleFunc("/createbackup", bh.CreateBackup)
 	mux.HandleFunc("/altauth", ch.AltAuth)
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"https://app.spinup.host", "http://localhost:3000"},
 		AllowedHeaders: []string{"authorization", "content-type", "x-api-key"},
 	})
 
