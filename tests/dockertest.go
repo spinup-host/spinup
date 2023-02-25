@@ -2,13 +2,12 @@ package tests
 
 import (
 	"context"
-	"strings"
-	"time"
-
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
+	"strings"
 
 	ds "github.com/spinup-host/spinup/internal/dockerservice"
 )
@@ -46,8 +45,7 @@ func (dt DockerTest) Cleanup() error {
 
 	var cleanupErr error
 	for _, c := range containers {
-		stopTimeout := 1 * time.Second
-		if err = dt.Cli.ContainerStop(ctx, c.ID, &stopTimeout); err != nil {
+		if err = dt.Cli.ContainerStop(ctx, c.ID, container.StopOptions{Timeout: nil}); err != nil {
 			if strings.Contains(err.Error(), "No such container") {
 				continue
 			}
