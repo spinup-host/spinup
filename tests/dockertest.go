@@ -2,12 +2,13 @@ package tests
 
 import (
 	"context"
+	"strings"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
-	"strings"
 
 	ds "github.com/spinup-host/spinup/internal/dockerservice"
 )

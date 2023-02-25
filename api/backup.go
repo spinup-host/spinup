@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+
+	"go.uber.org/zap"
+
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/utils"
-	"go.uber.org/zap"
-	"io"
-	"net/http"
 )
 
 // createBackupRequest holds the parameters needed to create a backup
