@@ -3,18 +3,16 @@ package dockerservice
 import (
 	"context"
 	"fmt"
-	"io"
-	"log"
-	"os"
-	"strings"
-	"time"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
+	"io"
+	"log"
+	"os"
+	"strings"
 )
 
 const (
@@ -116,7 +114,7 @@ func (c *Container) StartExisting(ctx context.Context, d Docker) error {
 
 // Restart restarts a docker container.
 func (c *Container) Restart(ctx context.Context, d Docker) error {
-	err := d.Cli.ContainerRestart(ctx, c.ID, nil)
+	err := d.Cli.ContainerRestart(ctx, c.ID, container.StopOptions{Timeout: nil})
 	if err != nil {
 		return errors.Wrapf(err, "unable to restart container: %s", c.ID)
 	}
@@ -210,9 +208,9 @@ func (c Container) ExecCommand(ctx context.Context, d Docker, execConfig types.E
 
 // Stop stops a running docker container.
 func (c *Container) Stop(ctx context.Context, d Docker, opts types.ContainerStartOptions) error {
-	timeout := 20 * time.Second
+	timeout := 20 // in seconds
 	log.Println("stopping container: ", c.ID)
-	return d.Cli.ContainerStop(ctx, c.ID, &timeout)
+	return d.Cli.ContainerStop(ctx, c.ID, container.StopOptions{Timeout: &timeout})
 }
 
 // Remove removes a stopped docker container
