@@ -22,7 +22,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.2.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.2
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/goleak v1.1.12 // indirect
 	go.uber.org/multierr v1.8.0
