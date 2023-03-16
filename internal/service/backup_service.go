@@ -5,23 +5,25 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"strconv"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
+
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/dockerservice"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/internal/postgres"
 	"github.com/spinup-host/spinup/misc"
 	"github.com/spinup-host/spinup/utils"
-	"go.uber.org/zap"
-	"io"
-	"log"
-	"os"
-	"strconv"
 )
 
 // Ideally I would like to keep the modify-pghba.sh script to scripts directory.

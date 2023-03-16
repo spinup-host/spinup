@@ -133,3 +133,20 @@ func (g GithubAuthHandler) GithubAuth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(userJSON)
 }
+
+func (c ClusterHandler) AltAuth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Invalid Method ", http.StatusMethodNotAllowed)
+		return
+	}
+	apiKeyHeader := r.Header.Get("x-api-key")
+	log.Println("inside altauth")
+	_, err := ValidateUser(c.appConfig, "", apiKeyHeader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	w.Write([]byte("Valid Api Key"))
+	w.WriteHeader(http.StatusOK)
+
+}
