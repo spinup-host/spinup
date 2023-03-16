@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/spinup-host/spinup/config"
 	"net/http"
 	"testing"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 
+	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
 )
 
