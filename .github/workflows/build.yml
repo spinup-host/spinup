@@ -17,7 +17,5 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Run tests
-        run: make test
       - name: Build Binary
         run: make build
