@@ -76,7 +76,7 @@ func apiHandler() http.Handler {
 	rand.Seed(time.Now().UnixNano())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", api.Hello)
-	mux.HandleFunc("/createservice", ch.CreateService)
+	mux.HandleFunc("/createservice", ch.CreateCluster)
 	mux.HandleFunc("/githubAuth", githubHandler.GithubAuth)
 	mux.HandleFunc("/logs", api.Logs)
 	mux.HandleFunc("/streamlogs", api.StreamLogs)

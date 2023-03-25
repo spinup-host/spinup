@@ -33,6 +33,8 @@ test-coverage: ## Run the tests of the project and export the coverage
 	go tool cover -func profile.cov
 
 format:
+	goimports -local "github.com/spinup-host/spinup" -l -w ./
+	for f in $(git status -s | cut -f3 -d' '); do go fmt "$f"; done
 	gci write --section Standard --section Default --section "Prefix(github.com/spinup-host/spinup)" .
 
 install-deps:

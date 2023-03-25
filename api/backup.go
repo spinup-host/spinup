@@ -42,6 +42,17 @@ func (b BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 		respond(http.StatusMethodNotAllowed, w, map[string]string{"message": "invalid method"})
 		return
 	}
+	authHeader := r.Header.Get("Authorization")
+	apiKeyHeader := r.Header.Get("x-api-key")
+	var err error
+	_, err = ValidateUser(b.appConfig, authHeader, apiKeyHeader)
+	if err != nil {
+		b.logger.Error("Failed to validate user", zap.Error(err))
+		respond(http.StatusUnauthorized, w, map[string]string{
+			"message": "Unauthorized",
+		})
+		return
+	}
 	var s createBackupRequest
 	byteArray, err := io.ReadAll(r.Body)
 	if err != nil {

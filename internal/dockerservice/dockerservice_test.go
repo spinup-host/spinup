@@ -5,9 +5,9 @@ import (
 	"log"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -51,10 +51,13 @@ func (dt dockerTest) cleanup(t *testing.T) error {
 	}
 
 	var cleanupErr error
+	stopTimeout := 1 // timeout in seconds
 	for _, c := range containers {
 		t.Log(c.Names)
-		stopTimeout := 1 * time.Second
-		if err = dt.Cli.ContainerStop(ctx, c.ID, &stopTimeout); err != nil {
+		stopOpts := container.StopOptions{
+			Timeout: &stopTimeout,
+		}
+		if err = dt.Cli.ContainerStop(ctx, c.ID, stopOpts); err != nil {
 			if strings.Contains(err.Error(), "No such container") {
 				continue
 			}
