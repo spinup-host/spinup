@@ -13,7 +13,7 @@ func createServer(ch ClusterHandler) *http.Server {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/hello", Hello)
-	router.HandleFunc("/createservice", ch.CreateService)
+	router.HandleFunc("/createservice", ch.CreateCluster)
 	router.HandleFunc("/listcluster", ch.ListCluster)
 	router.HandleFunc("/cluster", ch.GetCluster)
 

@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/spinup-host/spinup/internal/metastore"
+	"github.com/spinup-host/spinup/testutils"
 )
 
 // cluster tests contain unit tests for cluster-related API endpoints.
@@ -17,20 +18,21 @@ func TestListCluster(t *testing.T) {
 
 	testClusters := []metastore.ClusterInfo{
 		{
-			ID: 1,
-			Name: "test_cluster_1",
+			ID:        1,
+			Name:      "test_cluster_1",
 			ClusterID: "test_cluster_1",
 		},
 	}
 
-	svc.On("ListClusters", mock.Anything, ).Return(testClusters, nil)
+	svc.On("ListClusters", mock.Anything).Return(testClusters, nil)
 
-	cfg := zap.NewProductionConfig()
-	cfg.OutputPaths = []string{"stdout"}
-	logger, err := cfg.Build()
+	loggerConfig := zap.NewProductionConfig()
+	loggerConfig.OutputPaths = []string{"stdout"}
+	logger, err := loggerConfig.Build()
 	assert.NoError(t, err)
 
-	ch, err := NewClusterHandler(svc, logger)
+	appConfig := testutils.GetConfig()
+	ch, err := NewClusterHandler(svc, appConfig, logger)
 	server := createServer(ch)
 
 	t.Run("fails for unauthenticated users", func(t *testing.T) {

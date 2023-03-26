@@ -3,20 +3,20 @@ package api
 import (
 	"testing"
 
-	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/testutils"
 )
 
 func TestValidateUser(t *testing.T) {
-	cfg := config.Configuration{}
+	cfg := testutils.GetConfig()
 	cfg.Common.ApiKey = "test_api_key"
 	t.Run("invalid user", func(t *testing.T) {
-		msg, err := ValidateUser("", "")
+		msg, err := ValidateUser(cfg, "", "")
 		validErrMsg := "no authorization keys found"
 		if err.Error() != validErrMsg || msg != "" {
 			t.Errorf("expected: %s ,found: %s ,userId: %s", validErrMsg, err.Error(), msg)
 		}
 		invalidApiKey := cfg.Common.ApiKey + "$"
-		msg, err = ValidateUser("", invalidApiKey)
+		msg, err = ValidateUser(cfg, "", invalidApiKey)
 		validErrMsg = "error validating api-key"
 		if err.Error() != validErrMsg || msg != "" {
 			t.Errorf("expected: %s ,found: %s ,userId: %s", validErrMsg, err.Error(), msg)
@@ -24,7 +24,7 @@ func TestValidateUser(t *testing.T) {
 	})
 
 	t.Run("valid user", func(t *testing.T) {
-		userId, err := ValidateUser("", cfg.Common.ApiKey)
+		userId, err := ValidateUser(cfg, "", cfg.Common.ApiKey)
 		if err != nil || userId != "testuser" {
 			t.Errorf("expected: testuser ,found: %s ,userId: %s", err.Error(), userId)
 		}

@@ -265,9 +265,9 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 		if backupContainer != nil {
 			err = backupContainer.StartExisting(context.TODO(), dockerClient)
 			if err != nil {
-				utils.Logger.Error( "failed to start existing walg container", zap.Error(err))
+				utils.Logger.Error("failed to start existing walg container", zap.Error(err))
 			} else {
-				utils.Logger.Info( fmt.Sprintf("reusing existing walg container: '%s'", containerName))
+				utils.Logger.Info(fmt.Sprintf("reusing existing walg container: '%s'", containerName))
 			}
 		} else {
 			if err != nil {
