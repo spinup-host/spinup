@@ -16,7 +16,6 @@ import (
 func stringToJWT(key *rsa.PrivateKey, text string) (string, error) {
 	// Declare the expiration time of the token
 	// here, we have kept it as 2 days
-	log.Println("string to JWT:", text)
 	expirationTime := time.Now().Add(48 * time.Hour)
 	// Create the JWT claims, which includes the text and expiry time
 	claims := &Claims{
@@ -98,7 +97,6 @@ func JWTToString(publicKey *rsa.PublicKey, tokenString string) (string, error) {
 		return publicKey, nil
 	}
 	claims := &Claims{}
-	log.Println("JWT to string:", tokenString)
 	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
 	if err != nil {
 		return "", err
@@ -106,6 +104,5 @@ func JWTToString(publicKey *rsa.PublicKey, tokenString string) (string, error) {
 	if !token.Valid {
 		return "", errors.New("invalid token")
 	}
-	log.Println("claims:", claims.Text)
 	return claims.Text, nil
 }

@@ -46,7 +46,6 @@ func (g GithubAuthHandler) GithubAuth(w http.ResponseWriter, r *http.Request) {
 	type userAuth struct {
 		Code string `json:"code"`
 	}
-	log.Println("req::", r.Body)
 	var ua userAuth
 	// TODO: format this to include best practices https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
 	err := json.NewDecoder(r.Body).Decode(&ua)

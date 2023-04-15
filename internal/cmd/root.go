@@ -17,6 +17,7 @@ var rootCmd = &cobra.Command{
 func Execute(ctx context.Context, buildInfo build.Info) error {
 	rootCmd.AddCommand(versionCmd(buildInfo))
 	rootCmd.AddCommand(startCmd())
+	rootCmd.AddCommand(backupCmd())
 
 	return rootCmd.ExecuteContext(ctx)
 }
