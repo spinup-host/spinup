@@ -10,3 +10,4 @@ common:
   client_id: <CLIENT_ID> #optional
   client_secret: <CLIENT_SECRET> #optional
   api_key: <API_KEY> #if not using github authentication
+  monitoring: true

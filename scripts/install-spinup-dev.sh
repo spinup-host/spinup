@@ -83,6 +83,7 @@ else
     client_id: ${CLIENT_ID}
     client_secret: ${CLIENT_SECRET}
     api_key: ${SPINUP_API_KEY}
+    monitoring: true
 EOF
 fi
 
