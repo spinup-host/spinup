@@ -92,13 +92,15 @@ func (bs BackupService) CreateBackup(ctx context.Context, clusterID string, back
 	dow, _ := backupConfig.Schedule["dow"].(string)
 	dowInt, _ := strconv.Atoi(dow)
 
-	insertSql := "insert into backup(clusterId, destination, bucket, second, minute, hour, dom, month, dow) values(?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	insertSql := "insert into backup(clusterId, destination, bucket, aws_secret_key, aws_access_key, second, minute, hour, dom, month, dow) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	if err := metastore.InsertBackup(
 		bs.store,
 		insertSql,
 		clusterID,
 		backupConfig.Dest.Name,
 		backupConfig.Dest.BucketName,
+		backupConfig.Dest.ApiKeySecret,
+		backupConfig.Dest.ApiKeyID,
 		0,
 		min,
 		h,

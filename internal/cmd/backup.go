@@ -1,19 +1,27 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 type backupOpts struct {
+	logger     *zap.Logger
 	clusterId  string
 	backupName string
 }
 
 func backupCmd() *cobra.Command {
-	backupOptions := &backupOpts{}
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Println("failed to build logger: ", err.Error())
+	}
+
+	backupOptions := &backupOpts{
+		logger: logger,
+	}
 	bc := &cobra.Command{
 		Use:   "backup",
 		Short: "Manage spinup backups",
@@ -43,5 +51,6 @@ func (b *backupOpts) handleBackupCmd(cmd *cobra.Command, args []string) {
 }
 
 func (b *backupOpts) handleRestoreBackupCmd(cobra *cobra.Command, args []string) {
-	log.Println(fmt.Sprintf("attempting restore into %s", b.clusterId))
+	b.logger.Info("attempting restore", zap.String("backup_name", b.backupName), zap.String("cluster_id", b.clusterId))
+
 }

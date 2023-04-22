@@ -75,6 +75,8 @@ func migration(ctx context.Context, db Db) error {
 	sqlStatements := []string{
 		"create table if not exists clusterInfo (id integer not null primary key autoincrement, clusterId text, name text, username text, password text, port integer, majVersion integer, minVersion integer);",
 		"create table if not exists backup (id integer not null primary key autoincrement, clusterid text, destination text, bucket text, second integer, minute integer, hour integer, dom integer, month integer, dow integer, foreign key(clusterid) references clusterinfo(clusterid));",
+		"ALTER TABLE backup ADD COLUMN aws_secret_key TEXT",
+		"ALTER TABLE backup ADD COLUMN aws_access_key TEXT",
 	}
 	tx, err := db.Client.Begin()
 	if err != nil {
@@ -84,7 +86,7 @@ func migration(ctx context.Context, db Db) error {
 	for _, sqlStatement := range sqlStatements {
 		_, err = tx.ExecContext(ctx, sqlStatement)
 		if err != nil {
-			return fmt.Errorf("couldn't execute a transaction for %s %w", sqlStatement, err)
+			log.Println("could not execute a transaction for " + sqlStatement + ": " + err.Error())
 		}
 	}
 	err = tx.Commit()
@@ -120,12 +122,12 @@ func InsertService(db Db, cluster ClusterInfo) error {
 	return nil
 }
 
-func InsertBackup(db Db, sql, clusterId, destination, bucket string, second, minute, hour, dom, month, dow int) error {
+func InsertBackup(db Db, sql, clusterId, destination, bucket, aws_secret_key, aws_access_key string, second, minute, hour, dom, month, dow int) error {
 	tx, err := db.Client.Begin()
 	if err != nil {
 		return fmt.Errorf("unable to begin a transaction %w", err)
 	}
-	res, err := tx.ExecContext(context.Background(), sql, clusterId, destination, bucket, second, minute, hour, dom, month, dow)
+	res, err := tx.ExecContext(context.Background(), sql, clusterId, destination, bucket, aws_secret_key, aws_access_key, second, minute, hour, dom, month, dow)
 	if err != nil {
 		return fmt.Errorf("unable to execute %s %v", sql, err)
 	}

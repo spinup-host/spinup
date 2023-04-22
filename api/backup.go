@@ -16,11 +16,12 @@ import (
 
 // createBackupRequest holds the parameters needed to create a backup
 type createBackupRequest struct {
-	ClusterID    string `json:"cluster_id"`
-	Name         string `json:"name"`
-	ApiKeyID     string `json:"api_key_id"`
-	ApiKeySecret string `json:"api_key_secret"`
-	BucketName   string `json:"bucket_name"`
+	ClusterID    string                 `json:"cluster_id"`
+	Name         string                 `json:"name"`
+	ApiKeyID     string                 `json:"api_key_id"`
+	ApiKeySecret string                 `json:"api_key_secret"`
+	BucketName   string                 `json:"bucket_name"`
+	Schedule     map[string]interface{} `json:"schedule"`
 }
 
 type BackupHandler struct {
@@ -78,6 +79,7 @@ func (b BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	backupCfg := metastore.BackupConfig{
+		Schedule: s.Schedule,
 		Dest: metastore.Destination{
 			Name:         s.Name,
 			BucketName:   s.BucketName,
