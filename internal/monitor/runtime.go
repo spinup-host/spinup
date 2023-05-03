@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
@@ -75,7 +74,7 @@ func (r *Runtime) AddTarget(ctx context.Context, t *Target) error {
 		return errors.Wrap(err, "could not get current data sources from postgres_exporter")
 	}
 
-	if err := r.pgExporterContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{}); err != nil {
+	if err := r.pgExporterContainer.Stop(ctx, r.dockerClient); err != nil {
 		return err
 	}
 	if err := r.pgExporterContainer.Remove(ctx, r.dockerClient); err != nil {
@@ -95,7 +94,7 @@ func (r *Runtime) AddTarget(ctx context.Context, t *Target) error {
 
 	_, err = newContainer.Start(ctx, r.dockerClient)
 	if err != nil {
-		r.logger.Error("stopping exporter container", zap.Error(newContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{})))
+		r.logger.Error("stopping exporter container", zap.Error(newContainer.Stop(ctx, r.dockerClient)))
 		return err
 	}
 

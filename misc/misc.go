@@ -73,6 +73,5 @@ func SliceContainsString(s []string, str string) bool {
 }
 
 func StringToDockerEnvVal(key, val string) string {
-	keyval := key + "=" + val
-	return keyval
+	return key + "=" + val
 }

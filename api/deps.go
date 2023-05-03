@@ -17,4 +17,5 @@ type clusterService interface {
 
 type backupService interface {
 	CreateBackup(ctx context.Context, clusterID string, backupConfig metastore.BackupConfig) error
+	Restore(ctx context.Context, networkName, clusterID, backupName string) error
 }

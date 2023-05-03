@@ -9,7 +9,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/volume"
+	volumeTypes "github.com/docker/docker/api/types/volume"
+	volume "github.com/docker/docker/volume"
 	"github.com/docker/go-connections/nat"
 
 	"github.com/spinup-host/spinup/internal/dockerservice"
@@ -32,8 +33,8 @@ type ContainerProps struct {
 }
 
 func NewPostgresContainer(client dockerservice.Docker, props ContainerProps) (postgresContainer dockerservice.Container, err error) {
-	newVolume, err := dockerservice.CreateVolume(context.Background(), client, volume.VolumeCreateBody{
-		Driver: "local",
+	newVolume, err := dockerservice.CreateVolume(context.Background(), client, volumeTypes.CreateOptions{
+		Driver: volume.LocalScope,
 		Labels: map[string]string{"purpose": "postgres data"},
 		Name:   props.Name,
 	})

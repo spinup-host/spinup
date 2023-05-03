@@ -122,12 +122,12 @@ func InsertService(db Db, cluster ClusterInfo) error {
 	return nil
 }
 
-func InsertBackup(db Db, sql, clusterId, destination, bucket, aws_secret_key, aws_access_key string, second, minute, hour, dom, month, dow int) error {
+func InsertBackup(db Db, sql, clusterId, destination, bucket, awsSecretKey, awsAccessKey string, second, minute, hour, dom, month, dow int) error {
 	tx, err := db.Client.Begin()
 	if err != nil {
 		return fmt.Errorf("unable to begin a transaction %w", err)
 	}
-	res, err := tx.ExecContext(context.Background(), sql, clusterId, destination, bucket, aws_secret_key, aws_access_key, second, minute, hour, dom, month, dow)
+	res, err := tx.ExecContext(context.Background(), sql, clusterId, destination, bucket, awsSecretKey, awsAccessKey, second, minute, hour, dom, month, dow)
 	if err != nil {
 		return fmt.Errorf("unable to execute %s %v", sql, err)
 	}
@@ -140,7 +140,26 @@ func InsertBackup(db Db, sql, clusterId, destination, bucket, aws_secret_key, aw
 	return nil
 }
 
-// AllClusters returns all clusters from clusterinfo table
+// GetBackupConfigForCluster returns the backup configuration for a given cluster.
+func GetBackupConfigForCluster(_ context.Context, db Db, clusterId string) (*BackupConfig, error) {
+	cfg := &BackupConfig{}
+	query := `SELECT destination, bucket, aws_secret_key, aws_access_key FROM backup WHERE clusterId = ? LIMIT 1`
+	if err := db.Client.QueryRow(query, clusterId).Scan(
+		&cfg.Dest.Name,
+		&cfg.Dest.BucketName,
+		&cfg.Dest.ApiKeySecret,
+		&cfg.Dest.ApiKeyID,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return cfg, errors.New(fmt.Sprintf("no backup found for cluster with ID: '%s'", clusterId))
+		}
+		return cfg, err
+	}
+
+	return cfg, nil
+}
+
+// AllClusters returns all clusters from clusterInfo table
 func AllClusters(db Db) (clustersInfo, error) {
 	if err := db.Client.Ping(); err != nil {
 		return nil, fmt.Errorf("error pinging sqlite database %w", err)
