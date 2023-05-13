@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -57,10 +56,11 @@ func (d Docker) GetContainer(ctx context.Context, name string) (*Container, erro
 				return nil, errors.Wrapf(err, "getting data for container %s", match.ID)
 			}
 			c := &Container{
-				ID:     match.ID,
-				Name:   name,
-				State:  match.State,
-				Config: *data.Config,
+				ID:         match.ID,
+				Name:       name,
+				State:      match.State,
+				Config:     *data.Config,
+				HostConfig: *data.HostConfig,
 				// note that if the container is stopped, network info will be empty and won't be populated
 				// until you call one of Start(), Restart(), or StartExisting().
 				NetworkConfig: network.NetworkingConfig{
@@ -107,7 +107,6 @@ func (d Docker) RemoveNetwork(ctx context.Context, networkID string) error {
 }
 
 func CreateVolume(ctx context.Context, d Docker, opt volume.CreateOptions) (volume.Volume, error) {
-	log.Println("INFO: volume created successfully ", opt.Name)
 	return d.Cli.VolumeCreate(ctx, opt)
 }
 
