@@ -157,6 +157,9 @@ func (d Docker) CopyFromContainer(ctx context.Context, containerID, srcPath, dst
 	return archive.CopyTo(preArchive, srcInfo, dstPath)
 }
 
+// CopyToContainer copies the source file to the given container.
+// It is a slimmed-down version of the original `docker cp` implementation.
+// Care must be taken to ensure that the dstPath is an existing directory in the target container.
 func (d Docker) CopyToContainer(ctx context.Context, containerID, srcPath, dstPath string) (err error) {
 	if srcPath != "-" {
 		// Get an absolute source path.
@@ -192,15 +195,14 @@ func (d Docker) CopyToContainer(ctx context.Context, containerID, srcPath, dstPa
 			return errors.Errorf("destination \"%s:%s\" must be a directory", containerID, dstPath)
 		}
 	} else {
-		// Prepare source copy info.
 		srcInfo, err := archive.CopyInfoSourcePath(srcPath, false)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to prepare source file(s)")
 		}
 
 		srcArchive, err := archive.TarResource(srcInfo)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to archive source file(s)")
 		}
 		defer srcArchive.Close()
 
@@ -218,7 +220,7 @@ func (d Docker) CopyToContainer(ctx context.Context, containerID, srcPath, dstPa
 		// destination that the user specified.
 		dstDir, preparedArchive, err := archive.PrepareArchiveCopy(srcArchive, srcInfo, dstInfo)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to prepare archive copy")
 		}
 		defer preparedArchive.Close()
 

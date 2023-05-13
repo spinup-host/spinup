@@ -2,13 +2,16 @@ package dockerservice
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -162,5 +165,43 @@ func Test_pullImageFromDockerRegistry(t *testing.T) {
 }
 
 func TestCopyToContainer(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	fname, err := os.CreateTemp("", "spinup-test")
+	require.NoError(t, err)
+	testID := uuid.New().String()
 
+	dc, err := newDockerTest(ctx, testID)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		assert.NoError(t, os.Remove(fname.Name()))
+		assert.NoError(t, dc.cleanup(t))
+	})
+
+	container := dc.createTestContainer(t, ctx, "tianon/true")
+	err = dc.Docker.CopyToContainer(ctx, container.ID, fname.Name(), "/")
+	assert.NoError(t, err)
+}
+
+func (dt dockerTest) createTestContainer(t *testing.T, ctx context.Context, image string) Container {
+	t.Helper()
+
+	endpointConfig := map[string]*network.EndpointSettings{}
+	endpointConfig[dt.NetworkName] = &network.EndpointSettings{}
+	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
+
+	ct := NewContainer(
+		fmt.Sprintf("spinup-test-%s", t.Name()),
+		container.Config{
+			Image: image,
+		},
+		container.HostConfig{},
+		nwConfig,
+	)
+
+	res, err := ct.Start(ctx, dt.Docker)
+	require.NoError(t, err)
+	assert.NotEmpty(t, res.ID)
+	return ct
 }
