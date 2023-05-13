@@ -160,3 +160,7 @@ func Test_pullImageFromDockerRegistry(t *testing.T) {
 		})
 	}
 }
+
+func TestCopyToContainer(t *testing.T) {
+
+}

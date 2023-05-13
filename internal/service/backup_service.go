@@ -68,7 +68,7 @@ type BackupData struct {
 	PgDatabase         string
 }
 
-func (b BackupService) CreateBackup(ctx context.Context, clusterID string, backupConfig metastore.BackupConfig) error {
+func (b BackupService) CreateBackup(_ context.Context, clusterID string, backupConfig metastore.BackupConfig) error {
 	cluster, err := metastore.GetClusterByID(b.store, clusterID)
 	if err != nil {
 		return err
@@ -231,7 +231,7 @@ func contentToTar(content []byte) (io.Writer, func(), error) {
 	if err := tw.WriteHeader(hdr); err != nil {
 		return nil, nil, err
 	}
-	if _, err := tw.Write([]byte(content)); err != nil {
+	if _, err := tw.Write(content); err != nil {
 		return nil, nil, err
 	}
 	rmFunc := func() {
@@ -310,8 +310,9 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 	}
 
 	timeLayout := "20060102T150405Z0700"
-	restoreVolumePath := "/tmp/restore/" + time.Now().Format(timeLayout)
-	walgFetchCmd := []string{"backup-fetch", backupName, restoreVolumePath}
+	restoreVolumePath := "/opt/restore/" + time.Now().Format(timeLayout) + "/"
+	b.logger.Info("Downloading backup data", zap.String("path", restoreVolumePath))
+	walgFetchCmd := []string{"backup-fetch", restoreVolumePath, backupName}
 
 	cluster, err := metastore.GetClusterByID(b.store, clusterID)
 	if err != nil {
@@ -323,10 +324,10 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 		return errors.Wrapf(err, "failed to get backup config for cluster %s", clusterID)
 	}
 
-	containerName := prefixRestoreContainer + cluster.Host
-	if existing, err := b.dockerClient.GetContainer(ctx, containerName); err == nil && existing != nil {
+	pgContainerName := prefixRestoreContainer + cluster.Host
+	if existing, err := b.dockerClient.GetContainer(ctx, pgContainerName); err == nil && existing != nil {
 		if err = existing.Remove(ctx, b.dockerClient); err != nil {
-			return errors.Wrapf(err, "failed to remove existing %s container, remove it manually and retry", containerName)
+			return errors.Wrapf(err, "failed to remove existing %s container, remove it manually and retry", pgContainerName)
 		}
 	}
 
@@ -338,13 +339,8 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 		Labels: map[string]string{"purpose": "walg_restore"},
 		Name:   "spinup-restore-" + backupName + time.Now().Format(timeLayout),
 	})
-	defer func() {
-		if errVolRemove := dockerservice.RemoveVolume(context.Background(), b.dockerClient, walgVolume.Name); errVolRemove != nil {
-			b.logger.Error("failed to remove volume", zap.Error(errVolRemove))
-		}
-	}()
 	walgContainer := dockerservice.NewContainer(
-		containerName,
+		pgContainerName,
 		container.Config{
 			Image:        walgImageName,
 			Env:          buildRestoreEnvVars(*backupData),
@@ -366,18 +362,36 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 	}
 	b.logger.Info("created wal-g container for restore", zap.String("id", walgContainer.ID))
 
-	currentContainer, err := b.dockerClient.GetContainer(ctx, clusterID)
-	if err != nil || currentContainer == nil {
-		return errors.Wrap(err, "failed to find existing database container")
+	// block until the restore container has exited (or runs into an error).
+	resultCh, errCh := b.dockerClient.Cli.ContainerWait(ctx, walgContainer.ID, container.WaitConditionNextExit)
+	b.logger.Info("fetching backups...")
+	select {
+	case result := <-resultCh:
+		if result.Error != nil {
+			b.logger.Error(
+				fmt.Sprintf("error while waiting fetching backups. Run `docker logs %s` to view container logs", walgContainer.ID),
+				zap.String("error", result.Error.Message),
+			)
+			return errors.New(result.Error.Message)
+		}
+	case err = <-errCh:
+		b.logger.Error(
+			fmt.Sprintf("error while waiting fetching backups. Run `docker logs %s` to view container logs", walgContainer.ID),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "error while waiting for container")
 	}
 
-	if err = currentContainer.Stop(ctx, b.dockerClient); err != nil {
-		return errors.Wrap(err, "failed to stop database container")
+	currentPgName := postgres.PREFIXPGCONTAINER + cluster.Name
+	currentContainer, err := b.stopContainer(ctx, currentPgName)
+	if err != nil {
+		return err
 	}
 
-	pgPath := "/var/lib/postgresql/data"
+	pgPath := "/var/lib/postgresql/data/"
 	pgContainerPath := fmt.Sprintf("%s:%s", currentContainer.ID, pgPath)
-	err = b.dockerClient.CopyToContainer(ctx, currentContainer.ID, restoreVolumePath, pgContainerPath)
+	b.logger.Info("copying restored data", zap.String("src", walgContainer.ID), zap.String("dst", pgPath))
+	err = b.dockerClient.CopyToContainer(ctx, currentContainer.ID, walgVolume.Mountpoint, pgContainerPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy restored data directory")
 	}
@@ -391,6 +405,24 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 		b.logger.Warn("warning while restart container", zap.String("message", warning))
 	}
 	return nil
+}
+
+func (b BackupService) stopContainer(ctx context.Context, name string) (*dockerservice.Container, error) {
+	currentContainer, err := b.dockerClient.GetContainer(ctx, name)
+	if err != nil {
+		b.logger.Error("failed to get postgres container", zap.Error(err))
+		return nil, errors.Wrap(err, "failed to find existing database container")
+	}
+	if currentContainer == nil {
+		b.logger.Error("no container for cluster cluster: " + name)
+		return nil, errors.New("no container for provided cluster " + name)
+	}
+
+	b.logger.Info("stopping existing postgres container: " + currentContainer.Name)
+	if err = currentContainer.Stop(ctx, b.dockerClient); err != nil {
+		return nil, errors.Wrap(err, "failed to stop database container")
+	}
+	return currentContainer, nil
 }
 
 func buildRestoreEnvVars(config metastore.BackupConfig) []string {
