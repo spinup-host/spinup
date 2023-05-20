@@ -333,7 +333,7 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
 	restoreHostDir := "/tmp/spinup-restore-" + backupName + time.Now().Format(timeLayout)
-	if err := os.Mkdir(restoreHostDir, 600); err != nil {
+	if err := os.Mkdir(restoreHostDir, 777); err != nil {
 		return errors.Wrap(err, "failed to create restore directory")
 	}
 	if err != nil {
