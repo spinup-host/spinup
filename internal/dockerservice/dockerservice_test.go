@@ -106,14 +106,14 @@ func Test_imageExistsLocally(t *testing.T) {
 		expected                    bool
 	}{
 		{"image exist", "tianon/true", true, true},
-		{"image doesnot exist", "imageDoesnotExist:notag", false, false},
+		{"image does not exist", "imageDoesNotExist:notag", false, false},
 	}
 	for _, d := range data {
 		t.Run(d.name, func(t *testing.T) {
 			if d.pullImageFromDockerRegistry {
 				log.Println("INFO: pulling docker image from docker registry:", d.image)
-				// INFO: not sure what's the best way to make sure an image exists locally. Hence pulling it before testing imageExistsLocally.
-				// Perhaps we could move this to TestMain() which means we need to define a type for struct - not sure its that the right way to do
+				// INFO: not sure what's the best way to make sure an image exists locally, hence pulling it before testing imageExistsLocally.
+				// Perhaps we could move this to TestMain() which means we need to define a type for struct - not sure if it's that the right way to do
 				// postgres:9.6-alpine image will be pulled since its fairly small. It could be any image.
 				if err := pullImageFromDockerRegistry(dc.Docker, d.image); err != nil {
 					t.Errorf("error setting up imageExistsLocally() for test data %+v", d)
@@ -147,7 +147,7 @@ func Test_pullImageFromDockerRegistry(t *testing.T) {
 		expected error
 	}{
 		{"image exist", "tianon/true", nil},
-		{"image doesnot exist", "imageDoesnotExistInRegistry:notag", errors.New("unable to pull docker image")},
+		{"image does not exist", "imageDoesNotExistInRegistry:notag", errors.New("unable to pull docker image")},
 	}
 	for _, d := range data {
 		t.Run(d.name, func(t *testing.T) {
