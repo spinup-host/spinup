@@ -51,9 +51,13 @@ func (dt dockerTest) cleanup(t *testing.T) error {
 	}
 
 	var cleanupErr error
+	stopTimeout := 1 // timeout in seconds
 	for _, c := range containers {
 		t.Log(c.Names)
-		if err = dt.Cli.ContainerStop(ctx, c.ID, container.StopOptions{Timeout: nil}); err != nil {
+		stopOpts := container.StopOptions{
+			Timeout: &stopTimeout,
+		}
+		if err = dt.Cli.ContainerStop(ctx, c.ID, stopOpts); err != nil {
 			if strings.Contains(err.Error(), "No such container") {
 				continue
 			}

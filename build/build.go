@@ -14,6 +14,6 @@ var (
 // Info wraps the version/build  metadata
 type Info struct {
 	Version string
-	Commit string
-	Branch string
+	Commit  string
+	Branch  string
 }

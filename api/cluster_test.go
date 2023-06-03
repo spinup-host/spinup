@@ -10,6 +10,7 @@ import (
 
 	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
+	"github.com/spinup-host/spinup/testutils"
 )
 
 // cluster tests contain unit tests for cluster-related API endpoints.
@@ -24,16 +25,15 @@ func TestListCluster(t *testing.T) {
 		},
 	}
 
-	svc.On("ListClusters", mock.Anything, ).Return(testClusters, nil)
+	svc.On("ListClusters", mock.Anything).Return(testClusters, nil)
 
-	loggerCfg := zap.NewProductionConfig()
-	loggerCfg.OutputPaths = []string{"stdout"}
-	logger, err := loggerCfg.Build()
+	loggerConfig := zap.NewProductionConfig()
+	loggerConfig.OutputPaths = []string{"stdout"}
+	logger, err := loggerConfig.Build()
 	assert.NoError(t, err)
 
-	appCfg := config.Configuration{}
-
-	ch, err := NewClusterHandler(svc, appCfg, logger)
+	appConfig := testutils.GetConfig()
+	ch, err := NewClusterHandler(svc, appConfig, logger)
 	server := createServer(ch)
 
 	t.Run("fails for unauthenticated users", func(t *testing.T) {

@@ -3,11 +3,11 @@ package api
 import (
 	"testing"
 
-	"github.com/spinup-host/spinup/config"
+	"github.com/spinup-host/spinup/testutils"
 )
 
 func TestValidateUser(t *testing.T) {
-	cfg := config.Configuration{}
+	cfg := testutils.GetConfig()
 	cfg.Common.ApiKey = "test_api_key"
 	t.Run("invalid user", func(t *testing.T) {
 		msg, err := ValidateUser(cfg, "", "")

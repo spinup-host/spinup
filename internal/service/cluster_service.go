@@ -19,7 +19,7 @@ type Service struct {
 	dockerClient   dockerservice.Docker
 	monitorRuntime *monitor.Runtime
 
-	logger *zap.Logger
+	logger    *zap.Logger
 	svcConfig config.Configuration
 }
 
@@ -37,7 +37,7 @@ func NewService(client dockerservice.Docker, store metastore.Db, mr *monitor.Run
 		dockerClient:   client,
 		monitorRuntime: mr,
 
-		logger: logger,
+		logger:    logger,
 		svcConfig: cfg,
 	}
 }
@@ -137,7 +137,14 @@ func (svc *Service) addMonitorTarget(ctx context.Context, target *monitor.Target
 
 // ListClusters list all clusters currently available
 func (svc Service) ListClusters(ctx context.Context) ([]metastore.ClusterInfo, error) {
-	return metastore.AllClusters(svc.store)
+	clusters, err := metastore.AllClusters(svc.store)
+	if err != nil {
+		return nil, err
+	}
+	if len(clusters) < 1 {
+		clusters = []metastore.ClusterInfo{}
+	}
+	return clusters, nil
 }
 
 // GetClusterByID returns the specific cluster with the given ID, returns ErrNoMatch if no cluster was found.
@@ -147,7 +154,7 @@ func (svc Service) GetClusterByID(ctx context.Context, clusterID string) (metast
 		return ci, err
 	}
 	if ci.ClusterID == "" && ci.Name == "" {
-		return ci, ErrNoMatch {
+		return ci, ErrNoMatch{
 			id: clusterID,
 		}
 	}
