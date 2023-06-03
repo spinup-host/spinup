@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 
+	"github.com/spinup-host/spinup/config"
 	"github.com/spinup-host/spinup/internal/metastore"
 	"github.com/spinup-host/spinup/testutils"
 )
