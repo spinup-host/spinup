@@ -39,11 +39,8 @@ RUN cp /build/main .
 FROM docker/compose
 
 COPY --from=builder /dist/main /
-COPY docker-compose-template.yml .
 RUN mkdir /tmp/spinuplocal
 
-COPY app.rsa /tmp/spinuplocal
-COPY app.rsa.pub /tmp/spinuplocal
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \

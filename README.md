@@ -34,6 +34,23 @@ export CLIENT_SECRET=<GITHUB_CLIENT_SECRET>
 ```bash
 export SPINUP_API_KEY=<YOUR_API_KEY>
 ```
+
+### Docker
+Spinup works by starting other (database and related) services in docker, but you can test-run Spinup itself as a docker container.
+To do this:
+- Clone this repository and enter into the directory.
+- Build the Spinup docker image using the `Dockerfile` in the root folder e.g., with:
+   ```
+  docker build -t spinup/spinup .`
+  ```
+- Mount the `docker.sock` from your host into the Spinup container and start it as shown below:
+    ```
+  docker run -v /var/run/docker.sock:/var/run/docker.sock -v ./path/to/config.yaml:/root/.local/spinup/config.yaml -p 4434:4434 id/spinup:latest start --api-only
+    ```
+  The command above will start Spinup in API-only mode.
+
+NB: Mounting `docker.sock` gives Spinup root access to your host machine.
+
 ## Monitoring
 With monitoring enabled, Spinup will automatically setup monitoring services (Prometheus, Postgres Exporter, and Grafana) 
 for you on startup. Every new database you add will automatically be added to postgres exporter for scraping and its metrics exposed in Prometheus/Grafana.
