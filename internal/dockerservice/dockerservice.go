@@ -171,16 +171,11 @@ func (d Docker) CopyToContainer(ctx context.Context, containerID, srcPath, dstPa
 	// Prepare destination copy info by stat-ing the container path.
 	dstInfo := archive.CopyInfo{Path: dstPath}
 	dstStat, err := d.Cli.ContainerStatPath(ctx, containerID, dstPath)
-
-	// Ignore any error and assume that the parent directory of the destination
-	// path exists, in which case the copy may still succeed. If there is any
-	// type of conflict (e.g., non-directory overwriting an existing directory
-	// or vice versa) the extraction will fail. If the destination simply did
-	// not exist, but the parent directory does, the extraction will still
-	// succeed.
-	if err == nil {
-		dstInfo.Exists, dstInfo.IsDir = true, dstStat.Mode.IsDir()
+	if err != nil {
+		return err
 	}
+
+	dstInfo.Exists, dstInfo.IsDir = true, dstStat.Mode.IsDir()
 
 	var (
 		content         io.ReadCloser

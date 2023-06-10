@@ -308,9 +308,10 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 	}
 
 	timeLayout := "20060102T150405Z"
-	restoreVolumePath := "/tmp/restore/" + time.Now().Format(timeLayout) + "/"
-	b.logger.Info("Downloading backup data", zap.String("path", restoreVolumePath))
-	walgFetchCmd := []string{"backup-fetch", restoreVolumePath, backupName}
+	restoreContainerDir := "/tmp/restore/" + time.Now().Format(timeLayout) + "/"
+	restoreHostDir := "/tmp/spinup-restore-" + backupName + time.Now().Format(timeLayout)
+	b.logger.Info("Downloading backup data", zap.String("container_path", restoreContainerDir))
+	walgFetchCmd := []string{"wal-g", "backup-fetch", restoreContainerDir, backupName}
 
 	cluster, err := metastore.GetClusterByID(b.store, clusterID)
 	if err != nil {
@@ -332,7 +333,6 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 	endpointConfig := map[string]*network.EndpointSettings{}
 	endpointConfig[networkName] = &network.EndpointSettings{}
 	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
-	restoreHostDir := "/tmp/spinup-restore-" + backupName + time.Now().Format(timeLayout)
 	if err := os.Mkdir(restoreHostDir, 777); err != nil {
 		return errors.Wrap(err, "failed to create restore directory")
 	}
@@ -342,18 +342,17 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 	walgContainer := dockerservice.NewContainer(
 		pgContainerName,
 		container.Config{
-			Image:        walgImageName,
-			Env:          buildRestoreEnvVars(*backupData),
-			ExposedPorts: map[nat.Port]struct{}{"5432": {}},
-			Cmd:          walgFetchCmd,
-			User:         fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
+			Image:      walgImageName,
+			Env:        buildRestoreEnvVars(*backupData),
+			Cmd:        []string{"infinity"},
+			Entrypoint: []string{"sleep"},
 		},
 		container.HostConfig{
 			NetworkMode: "default",
 			Mounts: []mount.Mount{{
 				Type:   mount.TypeBind,
 				Source: restoreHostDir,
-				Target: restoreVolumePath,
+				Target: restoreContainerDir,
 				BindOptions: &mount.BindOptions{
 					CreateMountpoint: true,
 				},
@@ -366,42 +365,44 @@ func (b BackupService) Restore(ctx context.Context, networkName, clusterID, back
 	}
 	b.logger.Info("created wal-g container for restore", zap.String("id", walgContainer.ID))
 
-	// block until the restore container has exited (or runs into an error).
-	resultCh, errCh := b.dockerClient.Cli.ContainerWait(ctx, walgContainer.ID, container.WaitConditionNextExit)
-	b.logger.Info("fetching backups...")
-	select {
-	case result := <-resultCh:
-		if result.Error != nil {
-			b.logger.Error(
-				fmt.Sprintf("error while waiting fetching backups. Run `docker logs %s` to view container logs", walgContainer.ID),
-				zap.String("error", result.Error.Message),
-			)
-			return errors.New(result.Error.Message)
-		}
-	case err = <-errCh:
-		b.logger.Error(
-			fmt.Sprintf("error while waiting fetching backups. Run `docker logs %s` to view container logs", walgContainer.ID),
-			zap.Error(err),
-		)
-		return errors.Wrap(err, "error while waiting for container")
+	// fetch backup into specified directory
+	if _, err := walgContainer.ExecCommand(context.Background(), b.dockerClient, types.ExecConfig{
+		User:         "root",
+		WorkingDir:   restoreContainerDir,
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          walgFetchCmd,
+	}); err != nil {
+		return errors.Wrapf(err, "error executing command '%v'", walgFetchCmd)
+	}
+
+	// allow other users to access the restore files, so we can copy them later
+	if _, err := walgContainer.ExecCommand(context.Background(), b.dockerClient, types.ExecConfig{
+		User:         "root",
+		WorkingDir:   restoreContainerDir,
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          []string{"chmod", "-R", "777", restoreContainerDir},
+	}); err != nil {
+		return errors.Wrap(err, "error executing command 'chmod'")
 	}
 
 	currentPgName := postgres.PREFIXPGCONTAINER + cluster.Name
 	currentContainer, err := b.stopContainer(ctx, currentPgName)
-	if err != nil {
-		return err
-	}
 
 	b.logger.Info("got volume", zap.Any("volume", walgContainer.HostConfig.Mounts))
-	pgPath := "/var/lib/postgresql/data/"
-	b.logger.Info("copying restored data", zap.String("src", restoreHostDir), zap.String("dst", pgPath))
-	err = b.dockerClient.CopyToContainer(ctx, currentContainer.ID, restoreHostDir, pgPath)
+	srcPath := restoreHostDir + "/"
+	dstPath := "/var/lib/postgresql/data"
+	b.logger.Info("copying restored data", zap.String("src", srcPath), zap.String("dst", dstPath))
+	err = b.dockerClient.CopyToContainer(ctx, currentContainer.ID, srcPath, dstPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy restored data directory")
 	}
 
-	err = currentContainer.Restart(ctx, b.dockerClient)
-	if err != nil {
+	if err = walgContainer.Stop(ctx, b.dockerClient); err != nil {
+		b.logger.Error("Failed to stop wal-g container", zap.Error(err))
+	}
+	if err = currentContainer.Restart(ctx, b.dockerClient); err != nil {
 		return errors.Wrap(err, "failed to start container after restore")
 	}
 
