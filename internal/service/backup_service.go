@@ -9,9 +9,11 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
@@ -33,8 +35,11 @@ import (
 var f embed.FS
 
 const (
-	tarPath               = "modify-pghba.tar"
-	PREFIXBACKUPCONTAINER = "spinup-pg-backup-"
+	tarPath                = "modify-pghba.tar"
+	prefixBackupContainer  = "spinup-pg-backup-"
+	prefixRestoreContainer = "spinup-pg-restore-"
+
+	walgImageName = "spinuphost/walg:latest"
 )
 
 type BackupService struct {
@@ -61,15 +66,15 @@ type BackupData struct {
 	PgDatabase         string
 }
 
-func (bs BackupService) CreateBackup(ctx context.Context, clusterID string, backupConfig metastore.BackupConfig) error {
-	cluster, err := metastore.GetClusterByID(bs.store, clusterID)
+func (b BackupService) CreateBackup(_ context.Context, clusterID string, backupConfig metastore.BackupConfig) error {
+	cluster, err := metastore.GetClusterByID(b.store, clusterID)
 	if err != nil {
 		return err
 	}
 
 	pgHost := postgres.PREFIXPGCONTAINER + cluster.Name
 	var pgContainer *dockerservice.Container
-	if pgContainer, err = bs.dockerClient.GetContainer(context.Background(), postgres.PREFIXPGCONTAINER+cluster.Name); err != nil {
+	if pgContainer, err = b.dockerClient.GetContainer(context.Background(), postgres.PREFIXPGCONTAINER+cluster.Name); err != nil {
 		return errors.Wrap(err, "failed to get cluster container")
 	}
 
@@ -92,13 +97,15 @@ func (bs BackupService) CreateBackup(ctx context.Context, clusterID string, back
 	dow, _ := backupConfig.Schedule["dow"].(string)
 	dowInt, _ := strconv.Atoi(dow)
 
-	insertSql := "insert into backup(clusterId, destination, bucket, second, minute, hour, dom, month, dow) values(?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	insertSql := "insert into backup(clusterId, destination, bucket, aws_secret_key, aws_access_key, second, minute, hour, dom, month, dow) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	if err := metastore.InsertBackup(
-		bs.store,
+		b.store,
 		insertSql,
 		clusterID,
 		backupConfig.Dest.Name,
 		backupConfig.Dest.BucketName,
+		backupConfig.Dest.ApiKeySecret,
+		backupConfig.Dest.ApiKeyID,
 		0,
 		min,
 		h,
@@ -113,12 +120,12 @@ func (bs BackupService) CreateBackup(ctx context.Context, clusterID string, back
 	if err != nil {
 		utils.Logger.Error("reading modify-pghba.sh file ", zap.Error(err))
 	}
-	if err = updatePghba(pgContainer, bs.dockerClient, scriptContent); err != nil {
+	if err = updatePghba(pgContainer, b.dockerClient, scriptContent); err != nil {
 		return errors.Wrap(err, "failed to update pghba")
 	}
 
 	execPath := "/usr/lib/postgresql/" + strconv.Itoa(cluster.MajVersion) + "/bin/"
-	if err = postgres.ReloadPostgres(bs.dockerClient, execPath, postgres.PGDATADIR, pgHost); err != nil {
+	if err = postgres.ReloadPostgres(b.dockerClient, execPath, postgres.PGDATADIR, pgHost); err != nil {
 		return errors.Wrap(err, "failed to relaod postgres")
 	}
 	scheduler := cron.New()
@@ -222,7 +229,7 @@ func contentToTar(content []byte) (io.Writer, func(), error) {
 	if err := tw.WriteHeader(hdr); err != nil {
 		return nil, nil, err
 	}
-	if _, err := tw.Write([]byte(content)); err != nil {
+	if _, err := tw.Write(content); err != nil {
 		return nil, nil, err
 	}
 	rmFunc := func() {
@@ -238,7 +245,7 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 	if err != nil {
 		utils.Logger.Error("Error creating client", zap.Error(err))
 	}
-	var op container.ContainerCreateCreatedBody
+	var op container.CreateResponse
 	env := []string{
 		misc.StringToDockerEnvVal("AWS_SECRET_ACCESS_KEY", backupData.AwsAccessKeySecret),
 		misc.StringToDockerEnvVal("AWS_ACCESS_KEY_ID", backupData.AwsAccessKeyId),
@@ -260,7 +267,7 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 	return func() {
 		utils.Logger.Info("starting backup")
 
-		containerName := PREFIXBACKUPCONTAINER + backupData.PgHost
+		containerName := prefixBackupContainer + backupData.PgHost
 		backupContainer, err := dockerClient.GetContainer(context.TODO(), containerName)
 		if backupContainer != nil {
 			err = backupContainer.StartExisting(context.TODO(), dockerClient)
@@ -276,7 +283,7 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 			walgContainer := dockerservice.NewContainer(
 				containerName,
 				container.Config{
-					Image:        "spinuphost/walg:latest",
+					Image:        walgImageName,
 					Env:          env,
 					ExposedPorts: map[nat.Port]struct{}{"5432": {}},
 				},
@@ -292,5 +299,138 @@ func TriggerBackup(networkName string, backupData BackupData) func() {
 		}
 
 		utils.Logger.Info("Ending backup")
+	}
+}
+
+func (b BackupService) Restore(ctx context.Context, networkName, clusterID, backupName string) error {
+	if backupName == "" {
+		backupName = "LATEST"
+	}
+
+	timeLayout := "20060102T150405Z"
+	restoreContainerDir := "/tmp/restore/" + time.Now().Format(timeLayout) + "/"
+	restoreHostDir := "/tmp/spinup-restore-" + backupName + time.Now().Format(timeLayout)
+	b.logger.Info("Downloading backup data", zap.String("container_path", restoreContainerDir))
+	walgFetchCmd := []string{"wal-g", "backup-fetch", restoreContainerDir, backupName}
+
+	cluster, err := metastore.GetClusterByID(b.store, clusterID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get cluster")
+	}
+
+	backupData, err := metastore.GetBackupConfigForCluster(ctx, b.store, clusterID)
+	if err != nil || backupData == nil {
+		return errors.Wrapf(err, "failed to get backup config for cluster %s", clusterID)
+	}
+
+	pgContainerName := prefixRestoreContainer + cluster.Host
+	if existing, err := b.dockerClient.GetContainer(ctx, pgContainerName); err == nil && existing != nil {
+		if err = existing.Remove(ctx, b.dockerClient); err != nil {
+			return errors.Wrapf(err, "failed to remove existing %s container, remove it manually and retry", pgContainerName)
+		}
+	}
+
+	endpointConfig := map[string]*network.EndpointSettings{}
+	endpointConfig[networkName] = &network.EndpointSettings{}
+	nwConfig := network.NetworkingConfig{EndpointsConfig: endpointConfig}
+	if err := os.Mkdir(restoreHostDir, 777); err != nil {
+		return errors.Wrap(err, "failed to create restore directory")
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to create volume for wal-g restore")
+	}
+	walgContainer := dockerservice.NewContainer(
+		pgContainerName,
+		container.Config{
+			Image:      walgImageName,
+			Env:        buildRestoreEnvVars(*backupData),
+			Cmd:        []string{"infinity"},
+			Entrypoint: []string{"sleep"},
+		},
+		container.HostConfig{
+			NetworkMode: "default",
+			Mounts: []mount.Mount{{
+				Type:   mount.TypeBind,
+				Source: restoreHostDir,
+				Target: restoreContainerDir,
+				BindOptions: &mount.BindOptions{
+					CreateMountpoint: true,
+				},
+			}},
+		},
+		nwConfig,
+	)
+	if _, err = walgContainer.Start(ctx, b.dockerClient); err != nil {
+		return errors.Wrap(err, "failed to start walg-restore container")
+	}
+	b.logger.Info("created wal-g container for restore", zap.String("id", walgContainer.ID))
+
+	// fetch backup into specified directory
+	if _, err := walgContainer.ExecCommand(context.Background(), b.dockerClient, types.ExecConfig{
+		User:         "root",
+		WorkingDir:   restoreContainerDir,
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          walgFetchCmd,
+	}); err != nil {
+		return errors.Wrapf(err, "error executing command '%v'", walgFetchCmd)
+	}
+
+	// allow other users to access the restore files, so we can copy them later
+	if _, err := walgContainer.ExecCommand(context.Background(), b.dockerClient, types.ExecConfig{
+		User:         "root",
+		WorkingDir:   restoreContainerDir,
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          []string{"chmod", "-R", "777", restoreContainerDir},
+	}); err != nil {
+		return errors.Wrap(err, "error executing command 'chmod'")
+	}
+
+	currentPgName := postgres.PREFIXPGCONTAINER + cluster.Name
+	currentContainer, err := b.stopContainer(ctx, currentPgName)
+
+	b.logger.Info("got volume", zap.Any("volume", walgContainer.HostConfig.Mounts))
+	srcPath := restoreHostDir + "/"
+	dstPath := "/var/lib/postgresql/data"
+	b.logger.Info("copying restored data", zap.String("src", srcPath), zap.String("dst", dstPath))
+	err = b.dockerClient.CopyToContainer(ctx, currentContainer.ID, srcPath, dstPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to copy restored data directory")
+	}
+
+	if err = walgContainer.Stop(ctx, b.dockerClient); err != nil {
+		b.logger.Error("Failed to stop wal-g container", zap.Error(err))
+	}
+	if err = currentContainer.Restart(ctx, b.dockerClient); err != nil {
+		return errors.Wrap(err, "failed to start container after restore")
+	}
+
+	return nil
+}
+
+func (b BackupService) stopContainer(ctx context.Context, name string) (*dockerservice.Container, error) {
+	currentContainer, err := b.dockerClient.GetContainer(ctx, name)
+	if err != nil {
+		b.logger.Error("failed to get postgres container", zap.Error(err))
+		return nil, errors.Wrap(err, "failed to find existing database container")
+	}
+	if currentContainer == nil {
+		b.logger.Error("no container for cluster cluster: " + name)
+		return nil, errors.New("no container for provided cluster " + name)
+	}
+
+	b.logger.Info("stopping existing postgres container: " + currentContainer.Name)
+	if err = currentContainer.Stop(ctx, b.dockerClient); err != nil {
+		return nil, errors.Wrap(err, "failed to stop database container")
+	}
+	return currentContainer, nil
+}
+
+func buildRestoreEnvVars(config metastore.BackupConfig) []string {
+	return []string{
+		misc.StringToDockerEnvVal("AWS_SECRET_ACCESS_KEY", config.Dest.ApiKeySecret),
+		misc.StringToDockerEnvVal("AWS_ACCESS_KEY_ID", config.Dest.ApiKeyID),
+		misc.StringToDockerEnvVal("WALG_S3_PREFIX", "s3://"+config.Dest.BucketName),
 	}
 }

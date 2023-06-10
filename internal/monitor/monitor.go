@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -55,18 +54,18 @@ func (r *Runtime) BootstrapServices(ctx context.Context) error {
 	defer func() {
 		if err != nil {
 			if promContainer != nil {
-				if stopErr := promContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{}); err != nil {
+				if stopErr := promContainer.Stop(ctx, r.dockerClient); err != nil {
 					r.logger.Error("stopping prometheus container", zap.Error(stopErr))
 				}
 			}
 
 			if pgExporterContainer != nil {
-				stopErr := pgExporterContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{})
+				stopErr := pgExporterContainer.Stop(ctx, r.dockerClient)
 				r.logger.Error("stopping exporter container", zap.Error(stopErr))
 			}
 
 			if gfContainer != nil {
-				if stopErr := gfContainer.Stop(ctx, r.dockerClient, types.ContainerStartOptions{}); err != nil {
+				if stopErr := gfContainer.Stop(ctx, r.dockerClient); err != nil {
 					r.logger.Error("stopping grafana container", zap.Error(stopErr))
 				}
 			}

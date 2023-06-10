@@ -49,8 +49,8 @@ func NewContainer(name string, config container.Config, hostConfig container.Hos
 
 // Start creates and starts a docker container. If the base image doesn't exist locally, we attempt to pull it from
 // the docker registry.
-func (c *Container) Start(ctx context.Context, d Docker) (container.ContainerCreateCreatedBody, error) {
-	body := container.ContainerCreateCreatedBody{}
+func (c *Container) Start(ctx context.Context, d Docker) (container.CreateResponse, error) {
+	body := container.CreateResponse{}
 
 	exists, err := imageExistsLocally(context.Background(), d, c.Config.Image)
 	if err != nil {
@@ -208,7 +208,7 @@ func (c Container) ExecCommand(ctx context.Context, d Docker, execConfig types.E
 }
 
 // Stop stops a running docker container.
-func (c *Container) Stop(ctx context.Context, d Docker, opts types.ContainerStartOptions) error {
+func (c *Container) Stop(ctx context.Context, d Docker) error {
 	timeout := 20 // in seconds
 	log.Println("stopping container: ", c.ID)
 	return d.Cli.ContainerStop(ctx, c.ID, container.StopOptions{Timeout: &timeout})
